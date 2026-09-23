@@ -12,6 +12,8 @@ css/style.css       identidade visual, layout e estados de animação
 js/config.js        ⭐ TUDO que é do cliente: WhatsApp, rastreamento, rodapé, fotos, avaliações
 js/main.js          animações, formulário em 3 passos, eventos de conversão
 assets/             favicon, og.jpg (prévia de link) e vendor/ (GSAP + Lenis)
+package.json        mínimo, sem dependências (algumas hospedagens exigem para importar do Git)
+scripts/            build.js (gera dist/) e serve.js (servidor estático)
 ```
 
 ## Antes de rodar campanha (checklist)
@@ -49,10 +51,11 @@ Em qualquer caso o WhatsApp abre com o resumo das respostas — o lead não depe
 ## Testar localmente
 
 ```bash
-npx serve .          # ou:  python -m http.server 8080
+npm run dev
 ```
 
-Abra `http://localhost:3000` (ou `:8080`). Dá para simular anúncio com `?utm_source=instagram&utm_campaign=teste`.
+Abra `http://127.0.0.1:4321`. Dá para simular anúncio com `?utm_source=instagram&utm_campaign=teste`.
+(Se a porta estiver ocupada, use `node scripts/serve.js --host 127.0.0.1 --port 4390`.)
 
 ## Publicar: GitHub → hospedagem
 
@@ -65,17 +68,34 @@ git remote add origin https://github.com/SEU-USUARIO/unimotos-landing.git
 git push -u origin main
 ```
 
-Na hospedagem, conecte o repositório (Git / "Importar do GitHub") com estes parâmetros:
+### Opção A · Hostinger "Importar repositório Git" (apps Node) — a que pede `package.json`
+
+O repositório já tem um `package.json` mínimo (sem dependências). Ao importar, use:
 
 | Campo | Valor |
 |---|---|
-| Framework / tipo | Site estático / "Other" |
-| Comando de build | *(vazio)* |
-| Diretório de saída / raiz | `/` (raiz do repositório) |
-| Pasta de destino (hospedagem compartilhada) | `public_html` |
+| Framework | *Other / Outro* (ou o que a Hostinger detectar) |
+| Versão do Node | 20 ou 22 |
+| Comando de build | `npm run build` |
+| Diretório de saída | `dist` |
+| Comando de start (se pedir) | `npm start` |
 | Branch | `main` |
 
-Ative o deploy automático (webhook/auto-deploy) para cada `git push` atualizar a página.
+`npm run build` copia só os arquivos públicos para `dist/`. `npm start` serve essa pasta na porta que a hospedagem
+definir (`PORT`), então funciona tanto como "site estático" quanto como "app Node".
+
+### Opção B · hPanel → Avançado → Git (hospedagem compartilhada)
+
+Não precisa de `package.json`: aponte o repositório para `public_html`, branch `main`. O `index.html` já está na raiz.
+
+Em qualquer opção, ligue o **deploy automático** (webhook) para cada `git push` atualizar a página.
+
+### Rodar local
+
+```bash
+npm run dev          # http://127.0.0.1:4321 (só nesta máquina)
+npm start            # porta 3000 (ou PORT=xxxx npm start) — escuta em todas as interfaces
+```
 
 ## Acessibilidade e desempenho
 

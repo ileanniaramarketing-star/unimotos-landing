@@ -3,3 +3,6 @@ Thumbs.db
 node_modules/
 .env
 *.log
+
+# saída do build (gerada por npm run build)
+dist/

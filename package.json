@@ -1,0 +1,16 @@
+{
+  "name": "unimotos-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing page de campanha da Unimotos (HTML/CSS/JS estático, sem dependências)",
+  "main": "scripts/serve.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "start": "node scripts/serve.js",
+    "dev": "node scripts/serve.js --host 127.0.0.1 --port 4321"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}
