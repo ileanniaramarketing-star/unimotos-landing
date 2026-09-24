@@ -2,12 +2,15 @@
   "name": "unimotos-landing",
   "version": "1.0.0",
   "private": true,
-  "description": "Landing page de campanha da Unimotos (HTML/CSS/JS estático, sem dependências)",
+  "description": "Landing page de campanha da Unimotos (HTML/CSS/JS estático + endpoint /api/lead, sem dependências)",
   "main": "scripts/serve.js",
   "scripts": {
     "build": "node scripts/build.js",
     "start": "node scripts/serve.js",
-    "dev": "node scripts/serve.js --host 127.0.0.1 --port 4321"
+    "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 run -- node scripts/serve.js --src --host 127.0.0.1 --port 4321",
+    "dev:plain": "node scripts/serve.js --src --host 127.0.0.1 --port 4321",
+    "vault": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1",
+    "check:secrets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 scan"
   },
   "engines": {
     "node": ">=18"

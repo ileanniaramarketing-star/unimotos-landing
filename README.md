@@ -1,104 +1,111 @@
-# Unimotos · Landing page de campanha
+# Unimotos · Landing pages de campanha (proteção veicular)
 
-Landing page estática (HTML + CSS + JS puro), vermelho e preto, pensada para tráfego pago (Meta/Google Ads).
-**Sem build, sem dependências para instalar** — o `index.html` fica na raiz do repositório e as bibliotecas
-de animação (GSAP, ScrollTrigger, Lenis) já estão dentro de `assets/vendor/`.
+Duas páginas de campanha, com o mesmo visual (vermelho e preto) e conversão por **cotação pela placa**:
+
+| Rota | Página |
+|---|---|
+| `/motos/` | Proteção veicular para motos |
+| `/carros/` | Proteção veicular para carros |
+| `/` | Escolha entre as duas (opcional; os anúncios devem apontar direto para `/motos/` ou `/carros/`) |
+
+HTML/CSS/JS puros, sem dependências para instalar (GSAP e Lenis estão em `assets/vendor/`). Um servidor Node mínimo
+(`scripts/serve.js`) entrega as páginas e recebe o formulário em `/api/lead`, que encaminha o lead ao **Power CRM**.
+
+## Como o lead chega ao CRM (e por que o token nunca vai ao navegador)
+
+```
+Navegador ──POST /api/lead──▶ servidor do site ──(token + rodízio)──▶ Power CRM
+   (nome, WhatsApp, placa)       valida, barra robô,                   funil / vendedor
+   NUNCA vê o token              lê POWERCRM_TOKEN do ambiente
+```
+
+- O formulário só fala com o **próprio site**. O token existe apenas no servidor, como variável de ambiente.
+- O WhatsApp abre em paralelo: se o CRM estiver fora do ar, o lead não se perde para o cliente.
+- O servidor valida tudo de novo (nome, telefone BR, placa), tem isca anti-robô, limite por IP, anti-duplicidade e só aceita requisições da própria origem.
+- **Rodízio** entre Vitor e Kathleen (alternando, por veículo), `config/powercrm.json`.
+- Enquanto `config/powercrm.json` não estiver preenchido, o servidor só registra no log que o lead **não** foi ao CRM (`crm: not_configured` em `/api/health`).
+  Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar); só `POWERCRM_LIVE=1` envia de verdade.
+
+## Cofre de segredos (local)
+
+`.local/secrets.vault.json` — ignorado pelo Git, com ACL só do dono, valores cifrados pelo Windows (DPAPI): só abre no seu usuário do Windows nesta máquina.
+
+```powershell
+npm run vault -- list                 # nomes + tamanho + impressão digital (nunca o valor)
+npm run vault -- set POWERCRM_TOKEN   # guarda (digitação oculta)
+npm run vault -- remove NOME
+npm run dev                           # sobe http://127.0.0.1:4321 já com o cofre carregado (modo dry-run)
+npm run check:secrets                 # procura os segredos em todos os arquivos e no histórico do Git
+```
+
+- Há um **pre-commit** local (`.git/hooks/pre-commit`) que **bloqueia o commit** se qualquer valor do cofre aparecer nos arquivos.
+- **Em produção** (Hostinger): cadastre `POWERCRM_TOKEN` e `POWERCRM_LIVE=1` nas variáveis de ambiente do painel. Nunca em arquivo do repositório.
+- Se um token já passou por chat/e-mail, gere um novo no Power CRM (*Minha empresa → Integrações → Power API*) e troque no cofre e no painel.
+
+## Falta para ligar o CRM (`config/powercrm.json`)
+
+Preencher com o que está na documentação do painel do Power CRM: `baseUrl`, `auth.header`/`auth.scheme`, `endpoints.createQuotation`,
+`fieldMap` (nomes dos campos da cotação), `funnelStageId` (etapa inicial), e o `code` de cada vendedor. Cada veículo pode ter etapa e vendedores
+próprios em `products.moto` / `products.carro`.
 
 ## Estrutura
 
 ```
-index.html          página inteira (seções, textos, formulário)
-css/style.css       identidade visual, layout e estados de animação
-js/config.js        ⭐ TUDO que é do cliente: WhatsApp, rastreamento, rodapé, fotos, avaliações
-js/main.js          animações, formulário em 3 passos, eventos de conversão
-assets/             favicon, og.jpg (prévia de link) e vendor/ (GSAP + Lenis)
-package.json        mínimo, sem dependências (algumas hospedagens exigem para importar do Git)
-scripts/            build.js (gera dist/) e serve.js (servidor estático)
+index.html          escolha (/)
+motos/index.html    LP de motos
+carros/index.html   LP de carros
+css/style.css       visual, layout, animações
+js/config.js        ⭐ dados do cliente (PÚBLICO: nunca coloque token aqui)
+js/main.js          animações, formulário de cotação, eventos de conversão
+assets/             favicon, imagens de compartilhamento (og*.jpg), vendor/ (GSAP + Lenis)
+config/powercrm.json  configuração NÃO secreta do CRM
+scripts/            serve.js (servidor + /api/lead), build.js, vault.ps1, lib/ (lead, powercrm)
 ```
 
-## Antes de rodar campanha (checklist)
+## Antes de rodar campanha
 
-1. **`js/config.js` → `whatsapp`**: hoje é um número de teste (`5500000000000`). Troque pelo real (DDI+DDD+número).
-2. **Logo**: o logotipo do cabeçalho/rodapé é um wordmark em HTML/CSS (classe `.wordmark`). Para usar o logo
-   oficial, troque o conteúdo de `<a class="wordmark">` no topo e no rodapé do `index.html` por `<img src="assets/logo.svg" alt="Unimotos" height="34">`.
-3. **Rastreamento** (`gtmId`, `metaPixelId`, `ga4Id`): preencha só o que for usar. A página dispara:
-   - `whatsapp_click` (Meta: `Contact`) a cada clique em botão de WhatsApp, com o nome do botão em `cta`;
-   - `generate_lead` (Meta: `Lead`) quando o formulário é enviado.
-   - UTMs/`fbclid`/`gclid` ficam guardados na sessão e vão junto com o lead.
-4. **Rodapé** (`footer`): endereço, horário, Instagram, Facebook.
-5. **Textos**: copy é uma proposta — revise com o cliente (principalmente o que envolve condições de financiamento).
-6. **Fotos** (opcional): coloque em `assets/motos/` e informe em `photos` no `config.js`.
-   Sem foto, os cards usam o fundo vermelho/preto padrão.
-7. **Avaliações** (opcional): preencha `reviews` com avaliações **reais** do Google; a seção só aparece se houver itens.
-8. **og:image**: para a prévia do link no WhatsApp/Facebook funcionar, troque no `<head>` do `index.html`
-   `content="assets/og.jpg"` pela URL absoluta (ex.: `https://seudominio.com.br/assets/og.jpg`).
-9. **Indexação**: a página vem com `<meta name="robots" content="noindex,nofollow">` (padrão para página de anúncio).
-   Para deixar o Google indexar, troque por `index,follow`.
+1. **WhatsApp**: `js/config.js → whatsapp` está com número de teste (`5500000000000`). Trocar pelo real.
+2. **Conferir com o cliente** os textos e números baseados no site institucional da associação: *15 anos, +5.000 veículos reparados,
+   +4.800 indenizações pagas* (`stats`), endereço, coberturas (roubo e furto, colisão, incêndio, fenômenos naturais, perda total),
+   "até 100% da tabela FIPE", "sem análise de perfil", carro reserva e KM livre "conforme o plano". Aviso legal no rodapé:
+   associação de proteção veicular, **não é seguro**, Lei Complementar nº 213/2025.
+3. **Logo**: hoje é um wordmark em HTML/CSS (`.wordmark`). Trocar pelo logo oficial quando houver arquivo.
+4. **Rastreamento** (`gtmId`, `metaPixelId`, `ga4Id`): preencher só o que for usar. Eventos: `whatsapp_click` (Meta: Contact) e `generate_lead` (Meta: Lead), com `veiculo`.
+   Nome, telefone e placa **não** vão ao Pixel/GA.
+5. **Prévia de link** (`og:image`): use a URL absoluta do domínio (ex.: `https://seudominio.com.br/assets/og-motos.jpg`).
+6. **Indexação**: as páginas vêm com `noindex,nofollow` (padrão de página de anúncio). Trocar por `index,follow` se quiser aparecer no Google.
+7. **Consulta automática da placa** (opcional): `plateLookupUrl` aponta para um endpoint SEU que guarda a chave do provedor
+   (não existe API pública gratuita; há provedores com teste/limite gratuito). Vazio = só coleta a placa.
 
-## Captura de leads (opcional)
+## Rodar local
 
-Se `leadWebhook` estiver preenchido, o formulário faz um `POST` (JSON no corpo, `Content-Type: text/plain`
-para evitar preflight de CORS) com:
-
-```json
-{ "nome": "", "telefone": "5511987654321", "estilo": "", "condicao": "", "pagamento": "", "troca": "",
-  "pagina": "", "data": "", "utm_source": "", "utm_campaign": "" }
+```powershell
+npm run dev        # http://127.0.0.1:4321  → /motos/  /carros/   (F5 mostra a edição; CRM em dry-run)
 ```
 
-O receptor deve fazer `JSON.parse` do corpo (Supabase Edge Function, RD Station via função intermediária, Make, n8n, Zapier…).
-Em qualquer caso o WhatsApp abre com o resumo das respostas — o lead não depende do webhook.
+Simular anúncio: `http://127.0.0.1:4321/motos/?utm_source=instagram&utm_campaign=teste`.
 
-## Testar localmente
+## Publicar: GitHub → Hostinger
 
 ```bash
-npm run dev
+git add . && git commit -m "..." && git push
 ```
 
-Abra `http://127.0.0.1:4321`. Dá para simular anúncio com `?utm_source=instagram&utm_campaign=teste`.
-(Se a porta estiver ocupada, use `node scripts/serve.js --host 127.0.0.1 --port 4390`.)
-
-## Publicar: GitHub → hospedagem
-
-```bash
-git init
-git add .
-git commit -m "Landing page Unimotos"
-git branch -M main
-git remote add origin https://github.com/SEU-USUARIO/unimotos-landing.git
-git push -u origin main
-```
-
-### Opção A · Hostinger "Importar repositório Git" (apps Node) — a que pede `package.json`
-
-O repositório já tem um `package.json` mínimo (sem dependências). Ao importar, use:
+**Precisa de hospedagem com Node** (a Hostinger "Node.js / importar repositório Git"), porque `/api/lead` roda no servidor:
 
 | Campo | Valor |
 |---|---|
-| Framework | *Other / Outro* (ou o que a Hostinger detectar) |
-| Versão do Node | 20 ou 22 |
-| Comando de build | `npm run build` |
+| Comando de build | `npm run build` (gera `dist/`) |
 | Diretório de saída | `dist` |
-| Comando de start (se pedir) | `npm start` |
-| Branch | `main` |
+| Comando de start | `npm start` |
+| Node | 20 ou 22 |
+| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1` |
 
-`npm run build` copia só os arquivos públicos para `dist/`. `npm start` serve essa pasta na porta que a hospedagem
-definir (`PORT`), então funciona tanto como "site estático" quanto como "app Node".
+Se a hospedagem for **somente estática** (hPanel → Git → `public_html`), as páginas funcionam, mas `/api/lead` não existe: o formulário ainda abre o
+WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar por um endpoint externo (ex.: Supabase Edge Function) em `leadWebhook`.
 
-### Opção B · hPanel → Avançado → Git (hospedagem compartilhada)
-
-Não precisa de `package.json`: aponte o repositório para `public_html`, branch `main`. O `index.html` já está na raiz.
-
-Em qualquer opção, ligue o **deploy automático** (webhook) para cada `git push` atualizar a página.
-
-### Rodar local
-
-```bash
-npm run dev          # http://127.0.0.1:4321 (só nesta máquina)
-npm start            # porta 3000 (ou PORT=xxxx npm start) — escuta em todas as interfaces
-```
+Depois de publicar, `https://SEU-DOMINIO/api/health` deve responder `{"ok":true,"crm":"live"}`.
 
 ## Acessibilidade e desempenho
 
-- Respeita `prefers-reduced-motion` (sem animações para quem pediu) e funciona sem JavaScript (o conteúdo aparece).
-- Efeitos pesados (canvas de riscos, cursor, tilt) são reduzidos em celular; a rolagem horizontal fixa só liga em telas ≥ 980px.
-- Fontes: Big Shoulders Display + Manrope (Google Fonts).
+Respeita `prefers-reduced-motion`, funciona sem JavaScript (o conteúdo aparece), efeitos pesados são reduzidos no celular e a rolagem horizontal fixa só liga em telas ≥ 980px.

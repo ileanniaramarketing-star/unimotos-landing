@@ -3,544 +3,47 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-
-  <title>Unimotos · Motos novas e semi-novas com financiamento facilitado</title>
-  <meta name="description" content="Motos novas e semi-novas, financiamento facilitado e sua moto atual na troca. Fale com a Unimotos no WhatsApp e receba sua proposta sem compromisso.">
+  <title>Unimotos · Proteção veicular para motos e carros</title>
+  <meta name="description" content="Proteção veicular para motos e carros. Escolha o que proteger e faça a cotação pela placa.">
   <meta name="theme-color" content="#050505">
-  <!-- Página de campanha: fora do Google por padrão. Para indexar, troque por "index,follow". -->
   <meta name="robots" content="noindex,nofollow">
-
   <meta property="og:type" content="website">
   <meta property="og:locale" content="pt_BR">
-  <meta property="og:title" content="Unimotos · Sua próxima moto começa aqui">
-  <meta property="og:description" content="Motos novas e semi-novas, financiamento facilitado e sua moto na troca. Receba sua proposta no WhatsApp.">
-  <meta property="og:image" content="assets/og.jpg">
-  <meta name="twitter:card" content="summary_large_image">
-
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <meta property="og:title" content="Unimotos · Proteção veicular para motos e carros">
+  <meta property="og:description" content="Escolha o que proteger e faça a cotação pela placa.">
+  <meta property="og:image" content="/assets/og.jpg">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <script>document.documentElement.className = 'js';</script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="/css/style.css">
 </head>
-
-<body>
-  <a class="skip" href="#simular">Ir para o formulário</a>
-  <div class="progress" aria-hidden="true"><i id="progressBar"></i></div>
-  <div class="cursor" id="cursor" aria-hidden="true"><span></span></div>
-
-  <!-- ============================== NAV ============================== -->
-  <header class="nav" id="nav">
-    <div class="nav__inner container">
-      <a class="wordmark" href="#top" aria-label="Unimotos — início">
+<body class="choose-page">
+  <main class="choose">
+    <div class="container">
+      <a class="wordmark" href="/" aria-label="Unimotos">
         <span class="wordmark__slash"><i></i><i></i></span>
         <span class="wordmark__text">UNI<b>MOTOS</b></span>
       </a>
-      <nav class="nav__links" aria-label="Seções">
-        <a href="#estilos">Estilos</a>
-        <a href="#como">Como funciona</a>
-        <a href="#simular">Simulação</a>
-        <a href="#faq">Dúvidas</a>
-      </nav>
-      <a class="btn btn--primary btn--sm" data-wa data-cta="nav" data-magnetic href="#simular">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-        <span>Chamar no WhatsApp</span>
-      </a>
-    </div>
-  </header>
-
-  <main id="top">
-    <!-- ============================== HERO ============================== -->
-    <section class="hero" id="hero">
-      <canvas class="hero__streaks" id="streaks" aria-hidden="true"></canvas>
-      <div class="hero__bgtext" aria-hidden="true"><span id="bgText">UNIMOTOS</span></div>
-      <div class="hero__vignette" aria-hidden="true"></div>
-
-      <div class="hero__inner container">
-        <div class="hero__copy">
-          <p class="pill" data-hero="pill"><i class="pill__dot"></i> Motos novas &amp; semi-novas</p>
-          <h1 class="hero__title" id="heroTitle">
-            <span class="line"><span>Sua próxima</span></span>
-            <span class="line"><span>moto começa</span></span>
-            <span class="line"><span class="hl">aqui.</span></span>
-          </h1>
-          <p class="hero__sub" data-hero="sub">
-            Financiamento facilitado, sua moto atual na troca e atendimento direto no WhatsApp.
-            Escolha, simule e saia rodando com a Unimotos.
-          </p>
-          <div class="hero__cta" data-hero="cta">
-            <a class="btn btn--primary btn--lg" id="heroCta" data-wa data-cta="hero-primary" data-magnetic href="#simular">
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-              <span>Quero minha proposta</span>
-            </a>
-            <a class="btn btn--ghost btn--lg" data-cta="hero-simular" data-magnetic href="#simular">
-              <span>Simular em 30 segundos</span>
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-down"/></svg>
-            </a>
-          </div>
-          <ul class="proof" data-hero="proof">
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Aceitamos sua moto na troca</li>
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Simulação sem compromisso</li>
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Resposta pelo WhatsApp</li>
-          </ul>
-        </div>
-
-        <div class="hero__visual" data-hero="visual">
-          <div class="gauge" id="gauge" aria-hidden="true">
-            <div class="gauge__glow"></div>
-            <svg class="gauge__svg" viewBox="0 0 400 400">
-              <defs>
-                <linearGradient id="gFillGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0" stop-color="#ff5a4d"/>
-                  <stop offset="1" stop-color="#e31b23"/>
-                </linearGradient>
-                <radialGradient id="gFace" cx="50%" cy="50%" r="50%">
-                  <stop offset="0" stop-color="#1a1a1d"/>
-                  <stop offset="1" stop-color="#070708"/>
-                </radialGradient>
-              </defs>
-              <circle class="g-bezel" cx="200" cy="200" r="192"/>
-              <circle class="g-face" cx="200" cy="200" r="184" fill="url(#gFace)"/>
-              <circle class="g-ring" cx="200" cy="200" r="178"/>
-              <path class="g-track" id="gTrack"/>
-              <path class="g-fill" id="gFill" pathLength="1"/>
-              <g id="gTicks"></g>
-              <g id="gNums"></g>
-              <g id="gNeedle">
-                <path class="g-needle" d="M195 216 L200 78 L205 216 Z"/>
-                <circle class="g-cap" cx="200" cy="200" r="16"/>
-                <circle class="g-cap2" cx="200" cy="200" r="6"/>
-              </g>
-            </svg>
-            <div class="gauge__read">
-              <strong id="gSpeed">000</strong>
-              <small>km/h</small>
-            </div>
-            <div class="gauge__label">×1000 rpm</div>
-          </div>
-
-          <div class="chip chip--a" data-depth="18"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bolt"/></svg> Financiamento facilitado</div>
-          <div class="chip chip--b" data-depth="-14"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-swap"/></svg> Sua moto na troca</div>
-          <div class="chip chip--c" data-depth="24"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-key"/></svg> 0KM &amp; semi-novas</div>
-        </div>
-      </div>
-
-      <a class="scrollcue" href="#porque" aria-label="Rolar para baixo"><span></span></a>
-    </section>
-
-    <!-- ============================== MARQUEE ============================== -->
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee__band">
-        <div class="marquee__track" id="marqueeTrack">
-          <span>Compro</span><i></i><span class="o">Vendo</span><i></i><span>Troco</span><i></i><span class="o">Financio</span><i></i>
-          <span>Compro</span><i></i><span class="o">Vendo</span><i></i><span>Troco</span><i></i><span class="o">Financio</span><i></i>
-          <span>Compro</span><i></i><span class="o">Vendo</span><i></i><span>Troco</span><i></i><span class="o">Financio</span><i></i>
-          <span>Compro</span><i></i><span class="o">Vendo</span><i></i><span>Troco</span><i></i><span class="o">Financio</span><i></i>
-        </div>
-      </div>
-    </div>
-
-    <!-- ============================== BENEFÍCIOS ============================== -->
-    <section class="section why" id="porque">
-      <div class="container">
-        <header class="section__head">
-          <p class="eyebrow" data-reveal>Por que a Unimotos</p>
-          <h2 class="h2" data-split>Tudo pra você sair rodando. <span class="hl">Sem complicação.</span></h2>
-        </header>
-
-        <div class="bento">
-          <article class="card card--tall" data-reveal data-tilt>
-            <div class="card__big" aria-hidden="true">0KM</div>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-key"/></svg></div>
-            <h3>Novas e semi-novas</h3>
-            <p>Do dia a dia ao fim de semana na estrada de terra. Modelos pra cada perfil, cada estilo e cada bolso.</p>
-            <a class="link" data-wa data-cta="card-novas" href="#simular">Ver o que tem disponível <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></a>
-          </article>
-
-          <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></div>
-            <h3>Financiamento facilitado</h3>
-            <p>Simule sem compromisso. A gente cuida da papelada pra você só se preocupar em escolher a cor.</p>
-          </article>
-
-          <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-swap"/></svg></div>
-            <h3>Sua moto na troca</h3>
-            <p>Avaliamos a sua atual e usamos como entrada na próxima. Manda as fotos e a gente resolve.</p>
-          </article>
-
-          <article class="card card--wide" data-reveal data-tilt>
-            <div class="card__wide-copy">
-              <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-chat"/></svg></div>
-              <h3>Atendimento de quem entende de moto</h3>
-              <p>Chamou no WhatsApp, quem responde vive moto. Tira dúvida, manda foto, fala de condição — direto e sem enrolação.</p>
-            </div>
-            <a class="btn btn--primary" data-wa data-cta="card-atendimento" data-magnetic href="#simular">
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-              <span>Falar agora</span>
-            </a>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================== ESTILOS (scroll horizontal) ============================== -->
-    <section class="styles" id="estilos">
-      <div class="styles__pin" id="stylesPin">
-        <header class="styles__head container">
-          <div>
-            <p class="eyebrow" data-reveal>Encontre sua moto</p>
-            <h2 class="h2" data-split>Qual é o <span class="hl">seu estilo?</span></h2>
-          </div>
-          <p class="styles__hint" data-reveal>Toque no estilo e a gente te mostra as opções disponíveis no WhatsApp.</p>
-        </header>
-
-        <div class="styles__rail" id="stylesRail">
-          <div class="styles__track" id="stylesTrack">
-            <a class="scard" data-wa data-cat="Urbanas" data-cta="estilo-urbanas" href="#simular">
-              <span class="scard__num">01</span>
-              <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-urban"/></svg>
-              <span class="scard__body"><strong>Urbanas</strong><em>Praticidade e economia pro corre do dia a dia.</em></span>
-              <span class="scard__go">Ver opções <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-            <a class="scard" data-wa data-cat="Street e Naked" data-cta="estilo-street" href="#simular">
-              <span class="scard__num">02</span>
-              <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-street"/></svg>
-              <span class="scard__body"><strong>Street &amp; Naked</strong><em>Visual agressivo, pilotagem leve, cara de cidade.</em></span>
-              <span class="scard__go">Ver opções <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-            <a class="scard" data-wa data-cat="Trail e Big Trail" data-cta="estilo-trail" href="#simular">
-              <span class="scard__num">03</span>
-              <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-trail"/></svg>
-              <span class="scard__body"><strong>Trail &amp; Big Trail</strong><em>Liberdade na cidade e na estrada de terra.</em></span>
-              <span class="scard__go">Ver opções <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-            <a class="scard" data-wa data-cat="Custom" data-cta="estilo-custom" href="#simular">
-              <span class="scard__num">04</span>
-              <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-custom"/></svg>
-              <span class="scard__body"><strong>Custom</strong><em>Estilo, presença e aquele ronco que chama atenção.</em></span>
-              <span class="scard__go">Ver opções <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-            <a class="scard" data-wa data-cat="Esportivas" data-cta="estilo-esportivas" href="#simular">
-              <span class="scard__num">05</span>
-              <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-sport"/></svg>
-              <span class="scard__body"><strong>Esportivas</strong><em>Performance e adrenalina em cada curva.</em></span>
-              <span class="scard__go">Ver opções <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-            <a class="scard scard--cta" data-wa data-cta="estilo-outro" href="#simular">
-              <span class="scard__num">+</span>
-              <span class="scard__body"><strong>Não achou o seu?</strong><em>Conta pra gente o que você procura que a gente encontra.</em></span>
-              <span class="scard__go">Falar no WhatsApp <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-            </a>
-          </div>
-        </div>
-        <div class="styles__bar" aria-hidden="true"><i id="stylesBar"></i></div>
-      </div>
-    </section>
-
-    <!-- ============================== COMO FUNCIONA ============================== -->
-    <section class="section how" id="como">
-      <div class="container">
-        <header class="section__head">
-          <p class="eyebrow" data-reveal>Como funciona</p>
-          <h2 class="h2" data-split>Do primeiro papo ao guidão em <span class="hl">4 passos.</span></h2>
-        </header>
-
-        <div class="road" id="road" aria-hidden="true">
-          <div class="road__lane"><i></i></div>
-          <svg class="bike" id="bike" viewBox="0 0 760 340">
-            <defs>
-              <linearGradient id="tankGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stop-color="#ff4a3d"/>
-                <stop offset="1" stop-color="#a30009"/>
-              </linearGradient>
-            </defs>
-            <!-- rodas -->
-            <g id="wheelR">
-              <circle class="b-tire" cx="170" cy="252" r="78"/>
-              <circle class="b-rim" cx="170" cy="252" r="60"/>
-              <g class="b-spokes">
-                <path d="M170 252 L170 196 M170 252 L223 235 M170 252 L203 297 M170 252 L137 297 M170 252 L117 235"/>
-                <circle cx="170" cy="252" r="10"/>
-              </g>
-              <circle class="b-disc" cx="170" cy="252" r="34"/>
-            </g>
-            <g id="wheelF">
-              <circle class="b-tire" cx="590" cy="252" r="78"/>
-              <circle class="b-rim" cx="590" cy="252" r="60"/>
-              <g class="b-spokes">
-                <path d="M590 252 L590 196 M590 252 L643 235 M590 252 L623 297 M590 252 L557 297 M590 252 L537 235"/>
-                <circle cx="590" cy="252" r="10"/>
-              </g>
-              <circle class="b-disc" cx="590" cy="252" r="38"/>
-            </g>
-            <!-- chassi -->
-            <g class="b-body" fill="none">
-              <path pathLength="1" d="M338 252 L170 252"/>
-              <path pathLength="1" d="M338 264 L176 262"/>
-              <path pathLength="1" d="M506 150 L430 186 L340 244"/>
-              <path pathLength="1" d="M330 182 L352 246"/>
-              <path pathLength="1" d="M516 108 L590 252"/>
-              <path pathLength="1" d="M528 112 L598 248"/>
-              <path pathLength="1" d="M514 106 L486 96 L468 100"/>
-              <path pathLength="1" d="M538 106 L568 118 L560 142 L534 132 Z"/>
-              <path pathLength="1" d="M338 190 L468 190 L486 230 L474 288 L360 292 L334 244 Z"/>
-              <path pathLength="1" d="M392 160 L456 160 L456 190 L392 190 Z"/>
-              <path pathLength="1" d="M398 172 L450 172 M398 181 L450 181"/>
-              <circle pathLength="1" cx="404" cy="240" r="26"/>
-              <circle pathLength="1" cx="404" cy="240" r="11"/>
-              <path pathLength="1" d="M446 290 C404 316 300 320 226 296 L162 264"/>
-              <path pathLength="1" class="b-can" d="M262 306 L172 276"/>
-              <path pathLength="1" d="M517 198 A92 92 0 0 1 648 190"/>
-            </g>
-            <!-- tanque + banco (preenchidos) -->
-            <path class="b-tank" d="M512 118 C490 98 430 102 392 128 L398 166 C430 152 470 154 508 164 Z"/>
-            <path class="b-tank-hi" pathLength="1" d="M420 122 C452 114 484 120 502 134"/>
-            <path class="b-seat" d="M396 138 C352 132 292 140 252 146 C222 142 192 132 158 122 L164 148 C200 160 240 166 280 168 C320 170 360 170 398 168 Z"/>
-          </svg>
-        </div>
-
-        <ol class="steps" id="steps">
-          <li class="step" data-step="1">
-            <span class="step__n">01</span>
-            <h3>Chame no WhatsApp</h3>
-            <p>Conte o que você procura. Respondemos rápido e já mandamos opções.</p>
-          </li>
-          <li class="step" data-step="2">
-            <span class="step__n">02</span>
-            <h3>Escolha e simule</h3>
-            <p>Veja fotos, condições e simule o financiamento sem compromisso.</p>
-          </li>
-          <li class="step" data-step="3">
-            <span class="step__n">03</span>
-            <h3>Avaliamos sua troca</h3>
-            <p>Tem moto pra dar na troca? A gente avalia e usa como entrada.</p>
-          </li>
-          <li class="step" data-step="4">
-            <span class="step__n">04</span>
-            <h3>Retire e saia rodando</h3>
-            <p>Aprovado, documentação em ordem, chave na mão. Bora!</p>
-          </li>
-        </ol>
-      </div>
-    </section>
-
-    <!-- ============================== FORMULÁRIO ============================== -->
-    <section class="section lead" id="simular">
-      <div class="lead__glow" aria-hidden="true"></div>
-      <div class="container lead__grid">
-        <div class="lead__copy">
-          <p class="eyebrow" data-reveal>Proposta personalizada</p>
-          <h2 class="h2" data-split>Responda 3 perguntas e receba sua <span class="hl">proposta no WhatsApp.</span></h2>
-          <ul class="ticks" data-reveal>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Leva menos de 30 segundos</li>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Sem compromisso e sem custo</li>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Seus dados só são usados para esse contato</li>
-          </ul>
-          <a class="lead__alt" data-wa data-cta="form-alt" href="#simular" data-reveal>
-            Prefere ir direto? <span>Chame no WhatsApp <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-          </a>
-        </div>
-
-        <form class="form" id="leadForm" novalidate data-reveal>
-          <div class="form__top">
-            <span class="form__step" id="formStepLabel">Passo 1 de 3</span>
-            <div class="form__bar"><i id="formBar"></i></div>
-          </div>
-
-          <div class="form__steps" id="formSteps">
-            <!-- passo 1 -->
-            <fieldset class="fstep is-active" data-fstep="1">
-              <legend>O que você procura?</legend>
-              <div class="q">
-                <p class="q__label">Estilo de moto</p>
-                <div class="opts" data-name="estilo">
-                  <label><input type="radio" name="estilo" value="Urbana"><span>Urbana</span></label>
-                  <label><input type="radio" name="estilo" value="Street / Naked"><span>Street / Naked</span></label>
-                  <label><input type="radio" name="estilo" value="Trail / Big Trail"><span>Trail</span></label>
-                  <label><input type="radio" name="estilo" value="Custom"><span>Custom</span></label>
-                  <label><input type="radio" name="estilo" value="Esportiva"><span>Esportiva</span></label>
-                  <label><input type="radio" name="estilo" value="Ainda não sei"><span>Ainda não sei</span></label>
-                </div>
-              </div>
-              <div class="q">
-                <p class="q__label">Condição</p>
-                <div class="opts" data-name="condicao">
-                  <label><input type="radio" name="condicao" value="Nova (0KM)"><span>Nova (0KM)</span></label>
-                  <label><input type="radio" name="condicao" value="Semi-nova"><span>Semi-nova</span></label>
-                  <label><input type="radio" name="condicao" value="Tanto faz"><span>Tanto faz</span></label>
-                </div>
-              </div>
-            </fieldset>
-
-            <!-- passo 2 -->
-            <fieldset class="fstep" data-fstep="2">
-              <legend>Como pretende pagar?</legend>
-              <div class="q">
-                <p class="q__label">Forma de pagamento</p>
-                <div class="opts" data-name="pagamento">
-                  <label><input type="radio" name="pagamento" value="À vista"><span>À vista</span></label>
-                  <label><input type="radio" name="pagamento" value="Financiar"><span>Financiar</span></label>
-                  <label><input type="radio" name="pagamento" value="Entrada + financiamento"><span>Entrada + financiamento</span></label>
-                </div>
-              </div>
-              <div class="q">
-                <p class="q__label">Tem moto pra dar na troca?</p>
-                <div class="opts" data-name="troca">
-                  <label><input type="radio" name="troca" value="Sim"><span>Sim</span></label>
-                  <label><input type="radio" name="troca" value="Não"><span>Não</span></label>
-                </div>
-              </div>
-            </fieldset>
-
-            <!-- passo 3 -->
-            <fieldset class="fstep" data-fstep="3">
-              <legend>Pra onde enviamos sua proposta?</legend>
-              <div class="field">
-                <label for="fName">Seu nome</label>
-                <input id="fName" name="nome" type="text" autocomplete="name" placeholder="Como podemos te chamar?" required>
-                <small class="field__err" data-err="nome">Digite seu nome.</small>
-              </div>
-              <div class="field">
-                <label for="fPhone">WhatsApp</label>
-                <input id="fPhone" name="telefone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(00) 00000-0000" required>
-                <small class="field__err" data-err="telefone">Digite um WhatsApp com DDD.</small>
-              </div>
-              <p class="form__legal">Ao enviar, você concorda em receber contato da Unimotos pelo WhatsApp sobre a sua proposta.</p>
-            </fieldset>
-
-            <!-- sucesso -->
-            <div class="fsuccess" id="formSuccess" hidden>
-              <div class="fsuccess__ring"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
-              <h3>Prontinho! Abrindo seu WhatsApp…</h3>
-              <p>Se não abrir sozinho, toque no botão abaixo.</p>
-              <a class="btn btn--primary" id="formSuccessCta" target="_blank" rel="noopener" href="#">
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-                <span>Abrir WhatsApp</span>
-              </a>
-            </div>
-          </div>
-
-          <div class="form__nav" id="formNav">
-            <button type="button" class="btn btn--ghost" id="formBack" hidden>Voltar</button>
-            <button type="button" class="btn btn--primary" id="formNext" data-magnetic disabled>
-              <span id="formNextLabel">Continuar</span>
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- ============================== AVALIAÇÕES (só aparece com reviews reais no config.js) ============================== -->
-    <section class="section reviews" id="avaliacoes" hidden>
-      <div class="container">
-        <header class="section__head">
-          <p class="eyebrow">Avaliações no Google</p>
-          <h2 class="h2">Quem já rodou com a gente <span class="hl">recomenda.</span></h2>
-        </header>
-        <div class="reviews__grid" id="reviewsGrid"></div>
-        <a class="link reviews__all" id="reviewsAll" target="_blank" rel="noopener" hidden>Ver todas as avaliações <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></a>
-      </div>
-    </section>
-
-    <!-- ============================== FAQ ============================== -->
-    <section class="section faq" id="faq">
-      <div class="container faq__grid">
-        <header class="section__head">
-          <p class="eyebrow" data-reveal>Dúvidas frequentes</p>
-          <h2 class="h2" data-split>Antes de <span class="hl">chamar.</span></h2>
-          <p class="faq__lead" data-reveal>Não achou sua resposta? Chama a gente no WhatsApp que a resposta vem rápida.</p>
-        </header>
-        <div class="acc" id="acc">
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Como funciona o financiamento?</span><i></i></button>
-            <div class="acc__a"><div><p>Você faz uma simulação sem compromisso, escolhe o plano que cabe no bolso e a gente cuida da análise e da documentação. As condições dependem de análise de crédito.</p></div></div>
-          </div>
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Vocês aceitam minha moto na troca?</span><i></i></button>
-            <div class="acc__a"><div><p>Sim. Avaliamos a sua moto e o valor entra como parte da entrada na próxima. Manda fotos, ano e modelo no WhatsApp para agilizar.</p></div></div>
-          </div>
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Preciso pagar para simular?</span><i></i></button>
-            <div class="acc__a"><div><p>Não. A simulação e a proposta são gratuitas e sem compromisso.</p></div></div>
-          </div>
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Quais documentos eu preciso?</span><i></i></button>
-            <div class="acc__a"><div><p>Normalmente CNH, comprovante de residência e comprovante de renda. Pode variar conforme a forma de pagamento — a gente te orienta durante o atendimento.</p></div></div>
-          </div>
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Vocês vendem motos novas e usadas?</span><i></i></button>
-            <div class="acc__a"><div><p>Sim, trabalhamos com motos novas (0KM) e semi-novas, e também compramos e trocamos.</p></div></div>
-          </div>
-          <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Posso ir até a loja ver a moto antes?</span><i></i></button>
-            <div class="acc__a"><div><p>Claro. Chame no WhatsApp, combine o melhor horário e a gente separa a moto pra você conhecer de perto.</p></div></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============================== CTA FINAL ============================== -->
-    <section class="final" id="final">
-      <div class="final__rings" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="container final__inner">
-        <p class="eyebrow" data-reveal>Sua vez</p>
-        <h2 class="final__title" data-split>Bora rodar?</h2>
-        <p class="final__sub" data-reveal>Chame agora e receba sua proposta sem compromisso.</p>
-        <a class="btn btn--primary btn--xl" data-wa data-cta="final" data-magnetic href="#simular" data-reveal>
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-          <span>Chamar no WhatsApp</span>
+      <p class="eyebrow choose__eyebrow">Proteção veicular</p>
+      <h1 class="h2">O que você quer <span class="hl">proteger?</span></h1>
+      <div class="choose__grid">
+        <a class="scard" href="/motos/">
+          <span class="scard__num">01</span>
+          <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-street"/></svg>
+          <span class="scard__body"><strong>Motos</strong><em>Proteção para a sua moto, com cotação pela placa.</em></span>
+          <span class="scard__go">Cotar minha moto <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
         </a>
-        <p class="final__hours" id="finalHours" data-reveal></p>
+        <a class="scard" href="/carros/">
+          <span class="scard__num">02</span>
+          <svg class="scard__glyph" viewBox="0 0 120 120" aria-hidden="true"><use href="#g-sedan"/></svg>
+          <span class="scard__body"><strong>Carros</strong><em>Proteção para o seu carro, com cotação pela placa.</em></span>
+          <span class="scard__go">Cotar meu carro <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
+        </a>
       </div>
-    </section>
+      <p class="choose__legal">A Unimotos é uma associação de proteção veicular e não é seguradora. Coberturas, limites e valores seguem o regulamento. Consulte condições.</p>
+    </div>
   </main>
-
-  <!-- ============================== FOOTER ============================== -->
-  <footer class="footer">
-    <div class="container footer__inner">
-      <div class="footer__brand">
-        <a class="wordmark" href="#top" aria-label="Unimotos — topo">
-          <span class="wordmark__slash"><i></i><i></i></span>
-          <span class="wordmark__text">UNI<b>MOTOS</b></span>
-        </a>
-        <p>Compro, vendo, troco &amp; financio.<br>Motos novas e semi-novas.</p>
-      </div>
-      <div class="footer__col">
-        <h4>Loja</h4>
-        <p id="footAddress"></p>
-        <p id="footHours"></p>
-      </div>
-      <div class="footer__col">
-        <h4>Redes</h4>
-        <p><a id="footIg" target="_blank" rel="noopener" hidden>Instagram</a></p>
-        <p><a id="footFb" target="_blank" rel="noopener" hidden>Facebook</a></p>
-        <p><a data-wa data-cta="footer" href="#simular">WhatsApp</a></p>
-      </div>
-    </div>
-    <div class="container footer__legal">
-      <p>© <span id="year">2026</span> Unimotos. Todos os direitos reservados. Imagens meramente ilustrativas. Condições de financiamento sujeitas à análise de crédito.</p>
-    </div>
-  </footer>
-
-  <!-- barra fixa mobile + botão flutuante desktop -->
-  <div class="sticky" id="sticky">
-    <a class="btn btn--primary" data-wa data-cta="sticky" href="#simular">
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-      <span>Receber proposta no WhatsApp</span>
-    </a>
-    <a class="sticky__call" id="stickyCall" href="#" aria-label="Ligar" hidden>
-      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-phone"/></svg>
-    </a>
-  </div>
-  <a class="wafloat" id="waFloat" data-wa data-cta="wa-float" href="#simular" aria-label="Chamar no WhatsApp">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-  </a>
-
-  <!-- ============================== SPRITES ============================== -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
     <defs>
       <symbol id="i-wa" viewBox="0 0 24 24"><path fill="currentColor" d="M20.52 3.48A11.86 11.86 0 0 0 12.04 0C5.5 0 .2 5.3.2 11.84c0 2.08.54 4.1 1.57 5.9L0 24l6.4-1.68a11.8 11.8 0 0 0 5.64 1.44h.01c6.54 0 11.84-5.3 11.84-11.84 0-3.16-1.23-6.13-3.37-8.44zM12.05 21.8h-.01a9.9 9.9 0 0 1-5.04-1.38l-.36-.21-3.8 1 1.02-3.7-.24-.38a9.9 9.9 0 0 1-1.52-5.28c0-5.46 4.45-9.9 9.92-9.9 2.65 0 5.14 1.03 7.01 2.9a9.85 9.85 0 0 1 2.9 7c0 5.47-4.45 9.95-9.88 9.95zm5.44-7.42c-.3-.15-1.77-.87-2.04-.97-.27-.1-.47-.15-.67.15-.2.3-.77.97-.94 1.17-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.14-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.7.63.71.23 1.36.2 1.87.12.57-.08 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.07-.12-.27-.2-.57-.35z"/></symbol>
@@ -553,19 +56,24 @@
       <symbol id="i-chat" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M8.5 11h7M8.5 14h4"/></symbol>
       <symbol id="i-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></symbol>
 
+      
+      <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3zM8.5 12l2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></symbol>
+
       <!-- glifos das categorias (120x120) -->
       <symbol id="g-urban" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="84" r="16"/><circle cx="92" cy="84" r="16"/><path d="M30 84h20l12-30h14l10 30M62 54l-6-14h-14M48 84l8-22h22"/><path d="M22 60h22v14H22z"/></g></symbol>
       <symbol id="g-street" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="26" cy="82" r="17"/><circle cx="96" cy="82" r="17"/><path d="M26 82l20-28h26l8 10 14 18M46 54l-8-12h-14M72 54l4-14 14-4M50 82h26"/><path d="M52 58h18l4 10H52z"/></g></symbol>
       <symbol id="g-trail" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="86" r="18"/><circle cx="98" cy="86" r="18"/><path d="M24 86l18-30h28l10 8 18 22M42 56l-10-16h-12M70 56l2-24 16-6M48 86h30"/><path d="M52 60h20l4 10H52z"/></g></symbol>
       <symbol id="g-custom" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="22" cy="84" r="17"/><circle cx="100" cy="84" r="17"/><path d="M22 84l24-22h20l14 22M46 62l-12-8H22M72 62l8-28 12-6M58 84h18"/><path d="M48 52c6-6 18-6 26 0l-4 10H50z"/></g></symbol>
       <symbol id="g-sport" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="26" cy="86" r="16"/><circle cx="96" cy="86" r="16"/><path d="M26 86l16-24h30l12 4 12 20M42 62l-4-14h-10M72 62l6-20 14-2M50 86h28"/><path d="M52 62c10-8 26-6 34 4H52z"/></g></symbol>
+    
+      <!-- glifos dos cards de carro (120x120) -->
+      <symbol id="g-hatch" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 80V64Q10 58 16 57L32 54L44 38Q46 35 50 35H84Q88 35 90 38L102 56L108 58Q112 59 112 64V80H100M80 80H44M24 80H10"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
+      <symbol id="g-sedan" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 80V68Q6 62 12 61L28 58L42 40Q44 37 48 37H78Q82 37 85 40L96 58L110 61Q114 62 114 68V80H100M80 80H44M24 80H6"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
+      <symbol id="g-suv" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 80V56Q8 50 14 49L28 47L34 34Q35 31 39 31H88Q92 31 94 34L102 48L108 50Q112 51 112 56V80H100M80 80H44M24 80H8"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
+      <symbol id="g-pickup" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 80V62H46V44Q46 40 50 38L64 34H82Q86 34 88 37L96 52L108 56Q112 57 112 62V80H100M80 80H44M24 80H6M6 62V52H46"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
+      <symbol id="g-sportcar" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 80V70Q6 65 12 64L34 60L54 46Q56 44 60 44H80Q84 44 87 47L100 60L114 64Q118 65 118 70V80H100M80 80H44M24 80H6"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
     </defs>
   </svg>
-
-  <script src="assets/vendor/gsap.min.js" defer></script>
-  <script src="assets/vendor/ScrollTrigger.min.js" defer></script>
-  <script src="assets/vendor/lenis.min.js" defer></script>
-  <script src="js/config.js" defer></script>
-  <script src="js/main.js" defer></script>
 </body>
 </html>

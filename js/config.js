@@ -1,29 +1,43 @@
 /* ==========================================================================
-   UNIMOTOS · CONFIGURAÇÃO DA LANDING PAGE
-   Tudo que é específico do cliente fica aqui. Não precisa mexer no HTML.
+   UNIMOTOS · CONFIGURAÇÃO DAS LANDING PAGES (/motos e /carros)
+   Tudo que é específico do cliente fica aqui. Este arquivo é PÚBLICO (roda no navegador):
+   NUNCA coloque token, senha ou chave de API aqui. Segredos ficam só no cofre/servidor.
    ========================================================================== */
 window.UNI_CONFIG = {
 
   /* --- Contato --------------------------------------------------------- */
-  // WhatsApp com DDI+DDD, só números. Ex.: "5549988170588"
+  // WhatsApp com DDI+DDD, só números. Ex.: "5531999998888"
   // ⚠️ TROCAR pelo número real antes de rodar campanha.
   whatsapp: "5500000000000",
   // Telefone para o botão "Ligar" (mobile). Deixe "" para esconder.
   phone: "",
 
-  /* --- Mensagens do WhatsApp ------------------------------------------- */
+  /* --- Mensagens do WhatsApp (uma por veículo) --------------------------- */
   messages: {
-    default: "Olá! Vim pelo anúncio e quero saber mais sobre as motos da Unimotos.",
-    // usada quando a pessoa clica em uma categoria
-    category: "Olá! Vim pelo anúncio e tenho interesse em motos do tipo: {categoria}.",
-    // usada pelo formulário (o resumo das respostas é anexado automaticamente)
-    form: "Olá! Vim pelo anúncio e acabei de preencher o formulário."
+    // botões "Falar no WhatsApp"
+    default: {
+      moto: "Olá! Vim pelo anúncio e quero cotar a proteção veicular da minha moto.",
+      carro: "Olá! Vim pelo anúncio e quero cotar a proteção veicular do meu carro."
+    },
+    // aberta após o formulário de cotação (nome e placa são anexados automaticamente)
+    quote: {
+      moto: "Olá! Vim pelo anúncio e acabei de fazer a cotação da minha moto pela placa.",
+      carro: "Olá! Vim pelo anúncio e acabei de fazer a cotação do meu carro pela placa."
+    }
   },
 
-  /* --- Captura de lead -------------------------------------------------- */
-  // Opcional. URL que recebe o POST (JSON) do formulário: Supabase Edge Function,
-  // RD Station, Make, n8n, Zapier, etc. Vazio = só abre o WhatsApp.
-  leadWebhook: "",
+  /* --- Envio do lead ---------------------------------------------------- */
+  // "/api/lead" = endpoint do PRÓPRIO servidor do site (scripts/serve.js), que guarda o token do
+  // Power CRM e encaminha o lead ao funil. O navegador nunca vê o token.
+  // Também aceita uma URL externa (Make, n8n…); vazio = só abre o WhatsApp.
+  leadWebhook: "/api/lead",
+
+  /* --- Consulta automática da placa (opcional) ------------------------- */
+  // URL de um endpoint SEU (ex.: Supabase Edge Function) que recebe ?placa=ABC1D23,
+  // consulta a API de placas com a chave guardada no servidor e devolve JSON:
+  //   { "marca": "HONDA", "modelo": "CG 160 FAN", "ano": "2022", "cor": "PRETA" }
+  // Vazio = o formulário só coleta a placa, sem consultar.
+  plateLookupUrl: "",
 
   /* --- Rastreamento (deixe vazio para não carregar) --------------------- */
   gtmId: "",          // ex.: "GTM-XXXXXXX"
@@ -32,27 +46,29 @@ window.UNI_CONFIG = {
 
   /* --- Rodapé / institucional ------------------------------------------ */
   footer: {
-    address: "Endereço da loja · Cidade / UF",
-    hours: "Seg a Sex 8h–18h · Sáb 8h–12h",
-    instagram: "",    // ex.: "https://instagram.com/unimotos01"
-    facebook: ""      // ex.: "https://facebook.com/unimotos01"
+    address: "Av. Riacho das Pedras, 729 · Contagem / MG",   // ⚠️ confirmar com o cliente
+    hours: "",        // ex.: "Seg a Sex 8h–18h" (vazio = não mostra)
+    instagram: "",    // ex.: "https://instagram.com/unimotos"
+    facebook: ""
   },
 
-  /* --- Fotos dos cards de estilo ---------------------------------------- */
-  // Opcional. Coloque as fotos em assets/motos/ e informe o caminho.
-  // Vazio = o card usa o fundo vermelho/preto padrão (sem requisição extra).
-  photos: {
-    urbanas: "",      // ex.: "assets/motos/urbanas.jpg"
-    street: "",
-    trail: "",
-    custom: "",
-    esportivas: ""
-  },
+  /* --- Números institucionais (seção "stats") ---------------------------- */
+  // ⚠️ Retirados do site institucional da associação: CONFIRMAR com o cliente antes de publicar.
+  // Para esconder a seção, deixe a lista vazia: stats: []
+  stats: [
+    { value: 15, prefix: "", suffix: "", label: "anos de história" },
+    { value: 5000, prefix: "+", suffix: "", label: "veículos reparados" },
+    { value: 4800, prefix: "+", suffix: "", label: "indenizações pagas" }
+  ],
+
+  /* --- Fotos dos cards de tipo de veículo -------------------------------- */
+  // Opcional. Use caminhos absolutos, ex.: "/assets/motos/urbanas.jpg".
+  // Chaves: motos → urbanas, street, trail, custom, esportivas · carros → hatch, sedan, suv, picape, esportivo
+  photos: {},
 
   /* --- Avaliações do Google -------------------------------------------- */
   // Só aparece se houver itens. Use avaliações REAIS. Ex.:
   // { name: "João S.", text: "Atendimento excelente...", stars: 5 }
   reviews: [],
-  reviewsLink: "",    // link "Ver todas as avaliações" (Google Maps)
-  rating: ""          // ex.: "4,9"
+  reviewsLink: ""
 };

@@ -1,0 +1,27 @@
+{
+  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. Preencha os campos null com o que está na documentação do painel: Minha empresa > Integrações > Power API. Cada veículo (moto/carro) pode ter etapa de funil e vendedores próprios em 'products'; o que ficar null herda o bloco global.",
+  "baseUrl": null,
+  "auth": { "header": null, "scheme": null },
+  "endpoints": { "createQuotation": null },
+  "origin": "Landing Page",
+  "funnelStageId": null,
+  "sellers": [
+    { "name": "Vitor", "code": null, "active": true },
+    { "name": "Kathleen", "code": null, "active": true }
+  ],
+  "products": {
+    "moto": { "funnelStageId": null, "sellers": null },
+    "carro": { "funnelStageId": null, "sellers": null }
+  },
+  "fieldMap": {
+    "nome": null,
+    "telefone": null,
+    "placa": null,
+    "veiculo": null,
+    "origem": null,
+    "subOrigem": null,
+    "etapa": null,
+    "vendedor": null,
+    "observacao": null
+  }
+}

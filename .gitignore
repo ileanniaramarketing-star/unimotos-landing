@@ -6,3 +6,10 @@ node_modules/
 
 # saída do build (gerada por npm run build)
 dist/
+
+# cofre de segredos (NUNCA versionar)
+.local/
+.env
+.env.*
+*.vault.json
+.data/

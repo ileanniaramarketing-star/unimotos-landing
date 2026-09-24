@@ -11,9 +11,20 @@
   const $ = (s, c = document) => c.querySelector(s);
   const $$ = (s, c = document) => Array.from(c.querySelectorAll(s));
   const digits = (s) => String(s || '').replace(/\D/g, '');
+  const formatPhone = (raw) => {
+    const v = digits(raw).slice(0, 11);
+    if (v.length > 10) return v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+    if (v.length > 6) return v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+    if (v.length > 2) return v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
+    return v ? '(' + v : '';
+  };
+  const phoneValid = (raw) => { const d = digits(raw); return (d.length === 10 || d.length === 11) && d[0] !== '0'; };
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const hasGsap = !!(window.gsap && window.ScrollTrigger);
+  // cada página declara seu veículo: <body data-vehicle="moto|carro">
+  const VEHICLE = document.body.getAttribute('data-vehicle') === 'carro' ? 'carro' : 'moto';
+  const NOUN = VEHICLE === 'carro' ? { de: 'do carro', seu: 'o seu carro' } : { de: 'da moto', seu: 'a sua moto' };
 
   /* ------------------------------------------------------------------ *
    * 1. RASTREAMENTO + CONFIG
@@ -67,7 +78,7 @@
 
   // name: 'Contact' (clique no WhatsApp) | 'Lead' (formulário enviado)
   function track(name, params) {
-    const data = Object.assign({}, params || {}, utm);
+    const data = Object.assign({ veiculo: VEHICLE }, params || {}, utm);
     try {
       window.dataLayer.push(Object.assign({ event: name === 'Lead' ? 'generate_lead' : 'whatsapp_click' }, data));
       if (window.fbq) window.fbq('track', name, data);
@@ -78,7 +89,7 @@
   function waUrl(kind, extra) {
     const msgs = cfg.messages || {};
     let text = msgs[kind] || msgs.default || '';
-    text = text.replace('{categoria}', (extra && extra.categoria) || '');
+    if (text && typeof text === 'object') text = text[VEHICLE] || ''; // mensagens podem ser { moto, carro }
     if (extra && extra.append) text += '\n\n' + extra.append;
     return 'https://wa.me/' + digits(cfg.whatsapp) + '?text=' + encodeURIComponent(text);
   }
@@ -86,11 +97,10 @@
   function applyConfig() {
     // todos os botões de WhatsApp
     $$('[data-wa]').forEach((a) => {
-      const cat = a.getAttribute('data-cat');
-      a.href = cat ? waUrl('category', { categoria: cat }) : waUrl('default');
+      a.href = waUrl('default');
       a.target = '_blank';
       a.rel = 'noopener';
-      a.addEventListener('click', () => track('Contact', { cta: a.getAttribute('data-cta') || 'wa', categoria: cat || undefined }));
+      a.addEventListener('click', () => track('Contact', { cta: a.getAttribute('data-cta') || 'wa' }));
     });
 
     // fotos opcionais dos cards de estilo
@@ -114,6 +124,24 @@
     if (f.instagram) { const a = $('#footIg'); a.href = f.instagram; a.hidden = false; }
     if (f.facebook) { const a = $('#footFb'); a.href = f.facebook; a.hidden = false; }
     $('#year').textContent = new Date().getFullYear();
+
+    // números institucionais (config.js -> stats). Só aparece se houver itens.
+    const stats = Array.isArray(cfg.stats) ? cfg.stats : [];
+    if (stats.length) {
+      const grid = $('#statsGrid');
+      stats.forEach((st) => {
+        const val = Number(st.value) || 0;
+        const card = document.createElement('div'); card.className = 'stat'; card.setAttribute('data-reveal', '');
+        const n = document.createElement('span'); n.className = 'stat__n';
+        const pre = document.createElement('em'); pre.textContent = st.prefix || '';
+        const num = document.createElement('span'); num.className = 'stat__num'; num.setAttribute('data-to', String(val)); num.textContent = val.toLocaleString('pt-BR');
+        const suf = document.createElement('em'); suf.textContent = st.suffix || '';
+        n.append(pre, num, suf);
+        const l = document.createElement('span'); l.className = 'stat__l'; l.textContent = st.label || '';
+        card.append(n, l); grid.appendChild(card);
+      });
+      $('#numeros').hidden = false;
+    }
 
     // avaliações reais (opcional)
     const list = Array.isArray(cfg.reviews) ? cfg.reviews : [];
@@ -139,125 +167,128 @@
   }
 
   /* ------------------------------------------------------------------ *
-   * 2. FORMULÁRIO EM 3 PASSOS
+   * COTAÇÃO PELA PLACA (nome + WhatsApp + placa)  ->  /api/lead (servidor) -> Power CRM
+   * O navegador NUNCA fala com o CRM nem vê o token: só envia o lead ao próprio servidor do site.
+   * A consulta automática da placa é opcional: só roda se cfg.plateLookupUrl estiver preenchida.
    * ------------------------------------------------------------------ */
-  function initForm() {
-    const form = $('#leadForm');
-    const steps = $$('.fstep', form);
-    const label = $('#formStepLabel');
-    const bar = $('#formBar');
-    const back = $('#formBack');
-    const next = $('#formNext');
-    const nextLabel = $('#formNextLabel');
-    const success = $('#formSuccess');
-    const nav = $('#formNav');
-    const nameEl = $('#fName');
-    const phoneEl = $('#fPhone');
-    let step = 1;
+  function postLead(lead) {
+    const url = cfg.leadWebhook;
+    if (!url) return;
+    try {
+      if (url.charAt(0) === '/') { // mesma origem: servidor do próprio site (guarda o token do CRM)
+        fetch(url, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) }).catch(() => {});
+      } else { // webhook externo (Make, n8n…): text/plain evita preflight de CORS
+        fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(lead) }).catch(() => {});
+      }
+    } catch (e) { /* o WhatsApp abre de qualquer jeito */ }
+  }
+
+  function initQuote() {
+    const form = $('#quoteForm');
+    if (!form) return;
+    const nameEl = $('#qName'), phoneEl = $('#qPhone'), plateEl = $('#qPlate'), trap = $('#qWebsite');
+    const result = $('#plateResult'), success = $('#qSuccess'), fields = $('#qFields');
+    const cache = new Map();
+    let found = null; // dados do veículo vindos da consulta (se houver)
     let sent = false;
+    let seq = 0;
 
-    const val = (name) => { const c = form.querySelector('input[name="' + name + '"]:checked'); return c ? c.value : ''; };
-    const phoneOk = () => { const d = digits(phoneEl.value); return (d.length === 10 || d.length === 11) && d[0] !== '0'; };
-    const nameOk = () => nameEl.value.trim().length >= 2;
+    const normPlate = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+    // antiga: ABC1234 · Mercosul: ABC1D23
+    const plateOk = (p) => /^[A-Z]{3}[0-9]{4}$/.test(p) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(p);
+    const setErr = (el, on) => el.closest('.field').classList.toggle('has-err', on);
+    const clip = (v) => String(v == null ? '' : v).trim().slice(0, 60);
 
-    const complete = () => {
-      if (step === 1) return !!(val('estilo') && val('condicao'));
-      if (step === 2) return !!(val('pagamento') && val('troca'));
-      return nameOk() && phoneOk();
-    };
-    const refresh = () => { next.disabled = step < 3 ? !complete() : false; };
-
-    function go(n) {
-      const from = $('.fstep.is-active', form);
-      const dir = n > step ? 1 : -1;
-      step = n;
-      steps.forEach((s) => s.classList.toggle('is-active', +s.dataset.fstep === step));
-      const to = $('.fstep.is-active', form);
-      label.textContent = 'Passo ' + step + ' de 3';
-      bar.style.width = (step / 3 * 100) + '%';
-      back.hidden = step === 1;
-      nextLabel.textContent = step < 3 ? 'Continuar' : 'Receber proposta no WhatsApp';
-      refresh();
-      if (window.gsap && !reduce && from !== to) gsap.fromTo(to, { opacity: 0, x: 36 * dir }, { opacity: 1, x: 0, duration: .55, ease: 'power3.out', clearProps: 'transform' });
+    function showResult(kind, c) {
+      result.textContent = '';
+      if (kind === 'none') { result.hidden = true; return; }
+      result.hidden = false;
+      if (kind === 'loading') { result.textContent = 'Buscando os dados ' + NOUN.de + '…'; return; }
+      if (kind === 'miss') { result.textContent = 'Não conseguimos confirmar os dados agora. Sem problema: a equipe confere no atendimento.'; return; }
+      // textContent (nunca innerHTML): a resposta da API não é confiável
+      const t = document.createElement('strong'); t.textContent = [c.marca, c.modelo].filter(Boolean).join(' ');
+      const s = document.createElement('span'); s.textContent = [c.ano, c.cor].filter(Boolean).join(' · ');
+      const n = document.createElement('em'); n.textContent = 'Confira se é ' + NOUN.seu + '.';
+      result.append(t); if (s.textContent) result.append(s); result.append(n);
     }
 
-    form.addEventListener('change', (e) => {
-      refresh();
-      // avança sozinho quando o passo 1/2 fica completo (menos atrito)
-      if (e.target.type === 'radio' && step < 3 && complete()) {
-        clearTimeout(form._t);
-        form._t = setTimeout(() => { if (complete() && step < 3) go(step + 1); }, 320);
-      }
+    async function lookup(plate) {
+      if (cache.has(plate)) return cache.get(plate);
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 7000);
+      try {
+        const sep = cfg.plateLookupUrl.indexOf('?') > -1 ? '&' : '?';
+        const r = await fetch(cfg.plateLookupUrl + sep + 'placa=' + encodeURIComponent(plate), { signal: ctrl.signal, headers: { Accept: 'application/json' } });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const j = await r.json();
+        const out = j && (j.marca || j.modelo)
+          ? { marca: clip(j.marca), modelo: clip(j.modelo), ano: clip(j.ano || j.anoModelo), cor: clip(j.cor) }
+          : null;
+        cache.set(plate, out);
+        return out;
+      } catch (e) {
+        return null; // falha de rede/API nunca bloqueia o envio
+      } finally { clearTimeout(timer); }
+    }
+
+    plateEl.addEventListener('input', () => {
+      const p = normPlate(plateEl.value);
+      plateEl.value = p;
+      setErr(plateEl, false);
+      found = null; showResult('none'); seq++;
+      clearTimeout(plateEl._t);
+      if (!cfg.plateLookupUrl || !plateOk(p)) return;
+      const mine = seq;
+      plateEl._t = setTimeout(async () => {
+        showResult('loading');
+        const r = await lookup(p);
+        if (mine !== seq) return; // digitou outra placa enquanto buscava
+        found = r;
+        showResult(r ? 'ok' : 'miss', r);
+      }, 350);
     });
+    phoneEl.addEventListener('input', () => { phoneEl.value = formatPhone(phoneEl.value); setErr(phoneEl, false); });
+    nameEl.addEventListener('input', () => setErr(nameEl, false));
 
-    phoneEl.addEventListener('input', () => {
-      const v = digits(phoneEl.value).slice(0, 11);
-      let out = v;
-      if (v.length > 10) out = v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-      else if (v.length > 6) out = v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
-      else if (v.length > 2) out = v.replace(/(\d{2})(\d{0,5})/, '($1) $2');
-      else if (v.length) out = '(' + v;
-      phoneEl.value = out;
-      phoneEl.closest('.field').classList.remove('has-err');
-    });
-    nameEl.addEventListener('input', () => nameEl.closest('.field').classList.remove('has-err'));
-
-    back.addEventListener('click', () => go(Math.max(1, step - 1)));
-    next.addEventListener('click', () => (step < 3 ? go(step + 1) : submit()));
-    form.addEventListener('submit', (e) => { e.preventDefault(); if (step < 3) { if (complete()) go(step + 1); } else submit(); });
-
-    function submit() {
-      const okName = nameOk(), okPhone = phoneOk();
-      nameEl.closest('.field').classList.toggle('has-err', !okName);
-      phoneEl.closest('.field').classList.toggle('has-err', !okPhone);
-      if (!okName || !okPhone || sent) { (okName ? phoneEl : nameEl).focus(); return; }
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const plate = normPlate(plateEl.value);
+      const okName = nameEl.value.trim().length >= 2, okPhone = phoneValid(phoneEl.value), okPlate = plateOk(plate);
+      setErr(nameEl, !okName); setErr(phoneEl, !okPhone); setErr(plateEl, !okPlate);
+      if (!okName || !okPhone || !okPlate || sent) { (!okName ? nameEl : !okPhone ? phoneEl : plateEl).focus(); return; }
       sent = true;
 
       const lead = {
+        veiculo: VEHICLE,
         nome: nameEl.value.trim(),
         telefone: '55' + digits(phoneEl.value),
-        estilo: val('estilo'),
-        condicao: val('condicao'),
-        pagamento: val('pagamento'),
-        troca: val('troca'),
+        placa: plate,
+        website: trap ? trap.value : '', // isca anti-robô: pessoas deixam vazio
         pagina: location.origin + location.pathname,
         data: new Date().toISOString()
       };
+      if (found) Object.assign(lead, { marca: found.marca, modelo: found.modelo, ano: found.ano, cor: found.cor });
       Object.assign(lead, utm);
 
-      track('Lead', { estilo: lead.estilo, condicao: lead.condicao, pagamento: lead.pagamento, troca: lead.troca });
+      // dados pessoais (nome, telefone, placa) NÃO vão para Meta/GA — só o tipo do lead
+      track('Lead', { lead_type: 'cotacao', placa_consultada: !!found });
+      postLead(lead);
 
-      if (cfg.leadWebhook) {
-        try {
-          // text/plain evita preflight de CORS; o receptor deve fazer JSON.parse do corpo
-          fetch(cfg.leadWebhook, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(lead) });
-        } catch (e) { /* segue para o WhatsApp mesmo assim */ }
-      }
+      const linhas = ['Nome: ' + lead.nome, 'Placa: ' + plate];
+      if (found) linhas.push('Veículo (consulta): ' + [found.marca, found.modelo, found.ano].filter(Boolean).join(' '));
+      const url = waUrl('quote', { append: linhas.join('\n') });
 
-      const resumo = [
-        'Nome: ' + lead.nome,
-        'Estilo: ' + lead.estilo,
-        'Condição: ' + lead.condicao,
-        'Pagamento: ' + lead.pagamento,
-        'Moto na troca: ' + lead.troca
-      ].join('\n');
-      const url = waUrl('form', { append: resumo });
-
-      steps.forEach((s) => s.classList.remove('is-active'));
-      nav.hidden = true;
-      $('.form__top', form).hidden = true;
+      fields.hidden = true;
       success.hidden = false;
-      $('#formSuccessCta').href = url;
+      $('#qSuccessCta').href = url;
       if (window.gsap && !reduce) {
         gsap.fromTo(success, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out' });
-        gsap.fromTo('.fsuccess__ring', { scale: .4 }, { scale: 1, duration: .9, ease: 'elastic.out(1,.5)' });
+        gsap.fromTo($('.fsuccess__ring', success), { scale: .4 }, { scale: 1, duration: .9, ease: 'elastic.out(1,.5)' });
       }
-      // abre o WhatsApp (dentro do clique do usuário, então não é bloqueado)
+      // abre o WhatsApp dentro do clique do usuário (não é bloqueado como pop-up)
       const w = window.open(url, '_blank', 'noopener');
       if (!w) location.href = url;
-    }
-
-    refresh();
+    });
   }
 
   /* ------------------------------------------------------------------ *
@@ -291,7 +322,7 @@
       hideZone = Math.max(0, hideZone);
       update();
     }, { threshold: .25 });
-    ['#simular', '#final'].forEach((s) => io.observe($(s)));
+    ['#cotacao', '#final'].forEach((sel) => io.observe($(sel)));
 
     function update() {
       const y = window.scrollY || 0;
@@ -558,12 +589,13 @@
       const draw = $$('.b-body path, .b-body circle, .b-tank-hi');
       gsap.set(draw, { strokeDashoffset: 1 });
       gsap.set(['.b-tank', '.b-seat'], { opacity: 0 });
-      gsap.set('#wheelR, #wheelF', { opacity: 0 });
+      const wheels = $$('.b-wheel');
+      gsap.set(wheels, { opacity: 0 });
 
       // 1) desenha a moto quando a estrada entra na tela
       gsap.timeline({ scrollTrigger: { trigger: road, start: 'top 88%', end: 'top 55%', scrub: .6 } })
         .to(draw, { strokeDashoffset: 0, duration: 1, stagger: .05, ease: 'none' })
-        .to(['.b-tank', '.b-seat', '#wheelR', '#wheelF'], { opacity: 1, duration: .6, stagger: .08 }, '-=.6');
+        .to(['.b-tank', '.b-seat'].concat(wheels), { opacity: 1, duration: .6, stagger: .08 }, '-=.6');
 
       // 2) ela anda; rodas giram junto; passos acendem
       const maxX = () => road.offsetWidth - bike.getBoundingClientRect().width;
@@ -580,8 +612,7 @@
         }
       })
         .to(bike, { x: () => maxX(), ease: 'none' }, 0)
-        .to('#wheelR', { rotation: 1500, svgOrigin: '170 252', ease: 'none' }, 0)
-        .to('#wheelF', { rotation: 1500, svgOrigin: '590 252', ease: 'none' }, 0);
+        .to(wheels, { rotation: 1500, svgOrigin: (i, el) => el.getAttribute('data-origin'), ease: 'none' }, 0);
 
       return () => { stepEls.forEach((el) => el.classList.remove('is-on')); };
     });
@@ -591,6 +622,17 @@
         onToggle: (s) => el.classList.toggle('is-on', s.isActive || s.progress === 1)
       }));
       return () => { triggers.forEach((t) => t.kill()); stepEls.forEach((el) => el.classList.remove('is-on')); };
+    });
+
+    // ----- números institucionais: contagem ao entrar na tela -----
+    $$('.stat__num').forEach((num) => {
+      const to = Number(num.getAttribute('data-to')) || 0;
+      const o = { v: 0 };
+      num.textContent = '0';
+      ScrollTrigger.create({
+        trigger: num, start: 'top 90%', once: true,
+        onEnter: () => gsap.to(o, { v: to, duration: 1.9, ease: 'power2.out', onUpdate: () => { num.textContent = Math.round(o.v).toLocaleString('pt-BR'); } })
+      });
     });
 
     // ----- CTA final -----
@@ -655,7 +697,7 @@
   function boot() {
     loadTracking();
     applyConfig();
-    initForm();
+    initQuote();
     initFaq();
     initChrome();
 
