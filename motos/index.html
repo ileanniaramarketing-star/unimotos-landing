@@ -20,7 +20,7 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
 
   <script>document.documentElement.className = 'js';</script>
   <link rel="stylesheet" href="/css/style.css">
@@ -54,95 +54,110 @@
   <main id="top">
     <!-- ============================== HERO ============================== -->
     <section class="hero" id="hero">
-      <canvas class="hero__streaks" id="streaks" aria-hidden="true"></canvas>
-      <div class="hero__bgtext" aria-hidden="true"><span id="bgText">UNIMOTOS</span></div>
+      <div class="hero__arcs" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="hero__vignette" aria-hidden="true"></div>
 
       <div class="hero__inner container">
         <div class="hero__copy">
           <p class="pill" data-hero="pill"><i class="pill__dot"></i> Proteção veicular para motos</p>
           <h1 class="hero__title" id="heroTitle">
-            <span class="line"><span>Proteja sua</span></span>
-            <span class="line"><span>moto. Cote</span></span>
-            <span class="line"><span class="hl">pela placa.</span></span>
+            <span class="line"><span>Proteja o que</span></span>
+            <span class="line"><span>levou tempo</span></span>
+            <span class="line"><span class="hl">para construir!</span></span>
           </h1>
-          <p class="hero__sub" data-hero="sub">
-            Cobertura para roubo e furto, colisão e incêndio, com assistência 24 horas.
-            Informe a placa da sua moto e receba a cotação no WhatsApp.
-          </p>
-          <div class="hero__cta" data-hero="cta">
-            <a class="btn btn--primary btn--lg" id="heroCta" data-cta="hero-cotacao" data-magnetic href="#cotacao">
-              <span>Fazer minha cotação</span>
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-            </a>
-            <a class="btn btn--ghost btn--lg" data-wa data-cta="hero-wa" data-magnetic href="#cotacao">
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-              <span>Falar no WhatsApp</span>
-            </a>
+          <p class="hero__sub" data-hero="sub">Cote pela placa e receba no WhatsApp o valor da proteção da sua moto.</p>
+        </div>
+
+        <div class="hero__formwrap formscene" id="cotacao" data-hero="form">
+          <svg class="formscene__shield" viewBox="0 0 300 340" aria-hidden="true">
+            <path class="sh-o" pathLength="1" d="M150 14 L268 52 V152 C268 236 218 296 150 326 C82 296 32 236 32 152 V52 Z"/>
+            <path class="sh-i" pathLength="1" d="M150 40 L246 72 V152 C246 222 204 272 150 298 C96 272 54 222 54 152 V72 Z"/>
+            <path class="sh-c" pathLength="1" d="M92 172 L134 214 L212 130"/>
+          </svg>
+          <div class="price" id="heroPrice" hidden>
+            <small>a partir de</small>
+            <strong><span>R$</span><b id="priceValue">56</b><em>/mês</em></strong>
           </div>
-          <ul class="proof" data-hero="proof">
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Assistência 24 horas</li>
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Cotação sem compromisso</li>
-            <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Retorno pelo WhatsApp</li>
+
+          <form class="form aform" id="quoteForm" novalidate>
+            <div class="aform__steps" id="qFields">
+              <h3 class="aform__title">Cote sua moto</h3>
+              <p class="aform__sub">Preencha e receba o valor no seu WhatsApp.</p>
+
+              <div class="field">
+                <label for="qName">Seu nome</label>
+                <input id="qName" name="nome" type="text" autocomplete="name" placeholder="Como podemos te chamar?" required>
+                <small class="field__err" data-err="nome">Digite seu nome.</small>
+              </div>
+              <div class="field">
+                <label for="qPhone">WhatsApp</label>
+                <input id="qPhone" name="telefone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(00) 00000-0000" required>
+                <small class="field__err" data-err="telefone">Digite um WhatsApp com DDD.</small>
+              </div>
+              <div class="field">
+                <label for="qPlate">Placa da moto</label>
+                <div class="plate" id="plateBox">
+                  <div class="plate__top"><span>BRASIL</span><i aria-hidden="true"></i></div>
+                  <input id="qPlate" name="placa" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="ABC1D23" required>
+                </div>
+                <small class="field__err" data-err="placa">Digite uma placa válida (ex.: ABC1D23 ou ABC-1234).</small>
+                <div class="plate-result" id="plateResult" hidden aria-live="polite"></div>
+              </div>
+
+              <!-- isca anti-robô: pessoas não veem nem preenchem -->
+              <div class="hp" aria-hidden="true"><label>Não preencha este campo <input type="text" name="website" id="qWebsite" tabindex="-1" autocomplete="off"></label></div>
+
+              <div class="form__nav">
+                <button type="submit" class="btn btn--primary btn--lg" id="qSubmit" data-magnetic>
+                  <span>Fazer minha cotação</span>
+                  <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+                </button>
+              </div>
+              <ul class="form__ticks">
+              <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Sem compromisso</li>
+              <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Retorno pelo WhatsApp</li>
+              <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Sem análise de perfil</li>
+              </ul>
+              <p class="form__legal">Ao enviar, você concorda que a Unimotos use seu nome, telefone e a placa para fazer a cotação e falar com você pelo WhatsApp.</p>
+              <a class="aform__wa" data-wa data-cta="hero-wa" href="#cotacao">Prefere ir direto? <span>Chame no WhatsApp <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span></a>
+            </div>
+
+            <div class="fsuccess" id="qSuccess" hidden>
+              <div class="fsuccess__ring"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
+              <h3>Recebemos sua cotação! Abrindo o WhatsApp…</h3>
+              <p>Nossa equipe já recebeu seus dados. Se o WhatsApp não abrir sozinho, toque no botão abaixo.</p>
+              <a class="btn btn--primary" id="qSuccessCta" target="_blank" rel="noopener" href="#">
+                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
+                <span>Abrir WhatsApp</span>
+              </a>
+            </div>
+          </form>
+        </div>
+
+        <div class="perks-wrap" data-hero="perks">
+          <ul class="perks">
+            <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mask"/></svg></span><span>Roubo e <br>furto</span></li>
+            <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg></span><span>Pagamos 100% <br>da FIPE</span></li>
+            <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-truck"/></svg></span><span>Guincho todo <br>o Brasil</span></li>
+            <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tools"/></svg></span><span>Assistência <br>24h</span></li>
           </ul>
         </div>
-
-        <div class="hero__visual" data-hero="visual">
-          <div class="gauge" id="gauge" aria-hidden="true">
-            <div class="gauge__glow"></div>
-            <svg class="gauge__svg" viewBox="0 0 400 400">
-              <defs>
-                <linearGradient id="gFillGrad" x1="0" y1="1" x2="1" y2="0">
-                  <stop offset="0" stop-color="#ff5a4d"/>
-                  <stop offset="1" stop-color="#e31b23"/>
-                </linearGradient>
-                <radialGradient id="gFace" cx="50%" cy="50%" r="50%">
-                  <stop offset="0" stop-color="#1a1a1d"/>
-                  <stop offset="1" stop-color="#070708"/>
-                </radialGradient>
-              </defs>
-              <circle class="g-bezel" cx="200" cy="200" r="192"/>
-              <circle class="g-face" cx="200" cy="200" r="184" fill="url(#gFace)"/>
-              <circle class="g-ring" cx="200" cy="200" r="178"/>
-              <path class="g-track" id="gTrack"/>
-              <path class="g-fill" id="gFill" pathLength="1"/>
-              <g id="gTicks"></g>
-              <g id="gNums"></g>
-              <g id="gNeedle">
-                <path class="g-needle" d="M195 216 L200 78 L205 216 Z"/>
-                <circle class="g-cap" cx="200" cy="200" r="16"/>
-                <circle class="g-cap2" cx="200" cy="200" r="6"/>
-              </g>
-            </svg>
-            <div class="gauge__read">
-              <strong id="gSpeed">000</strong>
-              <small>km/h</small>
-            </div>
-            <div class="gauge__label">×1000 rpm</div>
-          </div>
-
-          <div class="chip chip--a" data-depth="18"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-shield"/></svg> Roubo e furto</div>
-          <div class="chip chip--b" data-depth="-14"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-clock"/></svg> Assistência 24h</div>
-          <div class="chip chip--c" data-depth="24"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check"/></svg> Até 100% da FIPE</div>
-        </div>
       </div>
-
-      <a class="scrollcue" href="#porque" aria-label="Rolar para baixo"><span></span></a>
     </section>
 
-    <!-- ============================== MARQUEE ============================== -->
+<!-- ============================== MARQUEE ============================== -->
     <div class="marquee" aria-hidden="true">
       <div class="marquee__band">
         <div class="marquee__track" id="marqueeTrack">
-          <span>Roubo e furto</span><i></i><span class="o">Colisão</span><i></i><span>Incêndio</span><i></i><span class="o">Assistência 24h</span><i></i>
-          <span>Roubo e furto</span><i></i><span class="o">Colisão</span><i></i><span>Incêndio</span><i></i><span class="o">Assistência 24h</span><i></i>
-          <span>Roubo e furto</span><i></i><span class="o">Colisão</span><i></i><span>Incêndio</span><i></i><span class="o">Assistência 24h</span><i></i>
-          <span>Roubo e furto</span><i></i><span class="o">Colisão</span><i></i><span>Incêndio</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
         </div>
       </div>
     </div>
 
-    <!-- ============================== COBERTURAS ============================== -->
+<!-- ============================== COBERTURAS ============================== -->
     <section class="section why" id="porque">
       <div class="container">
         <header class="section__head">
@@ -153,31 +168,31 @@
         <div class="bento">
           <article class="card card--tall" data-reveal data-tilt>
             <div class="card__big" aria-hidden="true">24H</div>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-tools"/></svg></div>
             <h3>Assistência 24 horas</h3>
             <p>Chaveiro, troca de pneus, retorno ao domicílio, auxílio pane seca e atendimento 0800 24 horas, conforme o plano.</p>
             <a class="link" data-cta="card-assistencia" href="#cotacao">Fazer minha cotação <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></a>
           </article>
 
           <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div>
-            <h3>Roubo, furto e mais</h3>
-            <p>Cobertura para furto e roubo, colisão, incêndio, fenômenos naturais e perda total. Consulte condições.</p>
+            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-mask"/></svg></div>
+            <h3>Roubo e furto</h3>
+            <p>Cobertura para furto e roubo, além de colisão, incêndio, fenômenos naturais e perda total. Consulte condições.</p>
           </article>
 
           <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-bolt"/></svg></div>
-            <h3>Até 100% da tabela FIPE</h3>
-            <p>A proteção considera o valor FIPE da sua moto. Faça a cotação pela placa para ver o seu caso.</p>
+            <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-truck"/></svg></div>
+            <h3>Guincho todo o Brasil</h3>
+            <p>Guincho em todo o Brasil, conforme o plano. Consulte as condições.</p>
           </article>
 
           <article class="card card--wide" data-reveal data-tilt>
             <div class="card__wide-copy">
-              <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
-              <h3>Sem análise de perfil</h3>
-              <p>O foco é o valor FIPE da sua moto, não o seu perfil. Cotação rápida, direto pelo WhatsApp e sem enrolação.</p>
+              <div class="card__icon"><svg viewBox="0 0 24 24"><use href="#i-shield"/></svg></div>
+              <h3>Pagamos 100% da FIPE</h3>
+              <p>Pagamos 100% do valor da tabela FIPE, conforme as condições da proteção. Sem análise de perfil. Consulte o regulamento.</p>
             </div>
-            <a class="btn btn--primary" data-cta="card-perfil" data-magnetic href="#cotacao">
+            <a class="btn btn--primary" data-cta="card-fipe" data-magnetic href="#cotacao">
               <span>Fazer minha cotação</span>
               <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
             </a>
@@ -186,73 +201,7 @@
       </div>
     </section>
 
-    <!-- ============================== COTAÇÃO PELA PLACA (conversão principal) ============================== -->
-    <section class="section lead lead--flip" id="cotacao">
-      <div class="lead__glow" aria-hidden="true"></div>
-      <div class="container lead__grid">
-        <div class="lead__copy">
-          <p class="eyebrow" data-reveal>Cotação pela placa</p>
-          <h2 class="h2" data-split>Quanto custa proteger a sua moto? <span class="hl">Cote pela placa.</span></h2>
-          <ul class="ticks" data-reveal>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Cotação sem compromisso</li>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Retorno direto no seu WhatsApp</li>
-            <li><svg class="ico" viewBox="0 0 24 24"><use href="#i-check"/></svg> Sem análise de perfil</li>
-          </ul>
-          <a class="lead__alt" data-wa data-cta="cotacao-alt" href="#cotacao" data-reveal>
-            Prefere ir direto? <span>Chame no WhatsApp <svg class="ico" viewBox="0 0 24 24"><use href="#i-arrow-right"/></svg></span>
-          </a>
-        </div>
-
-        <form class="form aform" id="quoteForm" novalidate data-reveal>
-          <div class="aform__steps" id="qFields">
-            <h3 class="aform__title">Cote sua moto</h3>
-
-            <div class="field">
-              <label for="qName">Seu nome</label>
-              <input id="qName" name="nome" type="text" autocomplete="name" placeholder="Como podemos te chamar?" required>
-              <small class="field__err" data-err="nome">Digite seu nome.</small>
-            </div>
-            <div class="field">
-              <label for="qPhone">WhatsApp</label>
-              <input id="qPhone" name="telefone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(00) 00000-0000" required>
-              <small class="field__err" data-err="telefone">Digite um WhatsApp com DDD.</small>
-            </div>
-            <div class="field">
-              <label for="qPlate">Placa da moto</label>
-              <div class="plate" id="plateBox">
-                <div class="plate__top"><span>BRASIL</span><i aria-hidden="true"></i></div>
-                <input id="qPlate" name="placa" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="ABC1D23" required>
-              </div>
-              <small class="field__err" data-err="placa">Digite uma placa válida (ex.: ABC1D23 ou ABC-1234).</small>
-              <div class="plate-result" id="plateResult" hidden aria-live="polite"></div>
-            </div>
-
-            <!-- isca anti-robô: pessoas não veem nem preenchem -->
-            <div class="hp" aria-hidden="true"><label>Não preencha este campo <input type="text" name="website" id="qWebsite" tabindex="-1" autocomplete="off"></label></div>
-
-            <p class="form__legal">Ao enviar, você concorda que a Unimotos use seu nome, telefone e a placa para fazer a cotação e falar com você pelo WhatsApp.</p>
-            <div class="form__nav">
-              <button type="submit" class="btn btn--primary btn--lg" id="qSubmit" data-magnetic>
-                <span>Fazer minha cotação</span>
-                <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
-              </button>
-            </div>
-          </div>
-
-          <div class="fsuccess" id="qSuccess" hidden>
-            <div class="fsuccess__ring"><svg viewBox="0 0 24 24"><use href="#i-check"/></svg></div>
-            <h3>Recebemos sua cotação! Abrindo o WhatsApp…</h3>
-            <p>Nossa equipe já recebeu seus dados. Se o WhatsApp não abrir sozinho, toque no botão abaixo.</p>
-            <a class="btn btn--primary" id="qSuccessCta" target="_blank" rel="noopener" href="#">
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wa"/></svg>
-              <span>Abrir WhatsApp</span>
-            </a>
-          </div>
-        </form>
-      </div>
-    </section>
-
-    <!-- ============================== ESTILOS (scroll horizontal) ============================== -->
+<!-- ============================== ESTILOS (scroll horizontal) ============================== -->
     <section class="styles" id="estilos">
       <div class="styles__pin" id="stylesPin">
         <header class="styles__head container">
@@ -439,8 +388,8 @@
             <div class="acc__a"><div><p>Não fazemos análise de perfil: o foco é o valor FIPE da moto. Consulte as condições para o seu caso.</p></div></div>
           </div>
           <div class="acc__item" data-reveal>
-            <button class="acc__q" type="button" aria-expanded="false"><span>Como funciona a assistência 24 horas?</span><i></i></button>
-            <div class="acc__a"><div><p>Chaveiro, troca de pneus, retorno ao domicílio, auxílio pane seca e atendimento 0800 24 horas, conforme o plano contratado.</p></div></div>
+            <button class="acc__q" type="button" aria-expanded="false"><span>Como funcionam a assistência 24 horas e o guincho?</span><i></i></button>
+            <div class="acc__a"><div><p>Chaveiro, troca de pneus, retorno ao domicílio, auxílio pane seca, guincho em todo o Brasil e atendimento 0800 24 horas, conforme o plano contratado.</p></div></div>
           </div>
           <div class="acc__item" data-reveal>
             <button class="acc__q" type="button" aria-expanded="false"><span>Vocês atendem em todo o Brasil?</span><i></i></button>
@@ -450,7 +399,7 @@
       </div>
     </section>
 
-    <!-- ============================== CTA FINAL ============================== -->
+<!-- ============================== CTA FINAL ============================== -->
     <section class="final" id="final">
       <div class="final__rings" aria-hidden="true"><i></i><i></i><i></i></div>
       <div class="container final__inner">
@@ -495,6 +444,7 @@
       </div>
     </div>
     <div class="container footer__legal">
+      <p class="footer__price" id="priceNote" hidden></p>
       <p>© <span id="year">2026</span> Unimotos. Todos os direitos reservados. A Unimotos é uma associação de proteção veicular e não é seguradora: coberturas, limites e valores seguem o regulamento da associação. Consulte condições. Atividade regulamentada pela Lei Complementar nº 213/2025.</p>
     </div>
   </footer>
@@ -529,6 +479,11 @@
       
       <symbol id="i-shield" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3v6c0 4.5-3.2 8.2-8 9-4.8-.8-8-4.5-8-9V6l8-3zM8.5 12l2.5 2.5 4.5-5"/></symbol>
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2"/></symbol>
+
+      
+      <symbol id="i-mask" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2c-3.5 0-6.3 2.8-6.3 6.3v3.6c0 3.5 2.8 6.4 6.3 6.4s6.3-2.9 6.3-6.4V9.5c0-3.5-2.8-6.3-6.3-6.3z"/><path d="M5.7 10.2h12.6v3.2H5.7z"/><path d="M9.3 11.8h.01M14.7 11.8h.01" stroke-width="2.6"/><path d="M10 17.2h4"/></g></symbol>
+      <symbol id="i-truck" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5v-5h10.5v5"/><path d="M13 16.5V10h3.7l3.3 3.6v2.9"/><circle cx="6.3" cy="17.6" r="1.8"/><circle cx="16.7" cy="17.6" r="1.8"/><path d="M8.1 17.6h6.8"/><path d="M4.4 11.5l1.2-2.6h4.6l1.2 2.6"/></g></symbol>
+      <symbol id="i-tools" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 4.6a3.9 3.9 0 0 0-4.9 5L4 15.3a1.9 1.9 0 0 0 2.7 2.7l5.7-5.7a3.9 3.9 0 0 0 5-4.9l-2.3 2.3-2-.6-.6-2z"/><path d="M14.5 14.5l4.7 4.7M17.5 19.9l2.4-2.4"/></g></symbol>
 
       <!-- glifos das categorias (120x120) -->
       <symbol id="g-urban" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="84" r="16"/><circle cx="92" cy="84" r="16"/><path d="M30 84h20l12-30h14l10 30M62 54l-6-14h-14M48 84l8-22h22"/><path d="M22 60h22v14H22z"/></g></symbol>

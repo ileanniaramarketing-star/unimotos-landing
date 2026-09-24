@@ -125,6 +125,16 @@
     if (f.facebook) { const a = $('#footFb'); a.href = f.facebook; a.hidden = false; }
     $('#year').textContent = new Date().getFullYear();
 
+    // selo "a partir de R$ X/mês" (config.js -> price.moto / price.carro). Vazio = não mostra.
+    const price = (cfg.price || {})[VEHICLE];
+    if (price) {
+      const txt = String(price).replace('.', ',');
+      $('#priceValue').textContent = txt;
+      $('#heroPrice').hidden = false;
+      const note = $('#priceNote');
+      if (note) { note.textContent = 'Valor a partir de R$ ' + txt + '/mês, sujeito ao modelo, ano e valor FIPE do veículo. Consulte condições.'; note.hidden = false; }
+    }
+
     // números institucionais (config.js -> stats). Só aparece se houver itens.
     const stats = Array.isArray(cfg.stats) ? cfg.stats : [];
     if (stats.length) {
@@ -341,55 +351,6 @@
   /* ------------------------------------------------------------------ *
    * 3. ANIMAÇÕES
    * ------------------------------------------------------------------ */
-  // ----- painel de instrumentos (tacômetro) -----
-  const G = { v: 0, scroll: 0, hover: 0, intro: true, visible: true };
-  const CX = 200, CY = 200;
-  const NS = 'http://www.w3.org/2000/svg';
-  const polar = (r, deg) => { const a = deg * Math.PI / 180; return [CX + r * Math.sin(a), CY - r * Math.cos(a)]; };
-
-  function buildGauge() {
-    const svgTicks = $('#gTicks'), svgNums = $('#gNums');
-    if (!svgTicks) return null;
-    const R = 178;
-    const [x0, y0] = polar(R, -135), [x1, y1] = polar(R, 135);
-    const d = 'M' + x0.toFixed(2) + ' ' + y0.toFixed(2) + ' A' + R + ' ' + R + ' 0 1 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2);
-    $('#gTrack').setAttribute('d', d);
-    $('#gFill').setAttribute('d', d);
-
-    for (let i = 0; i <= 60; i++) {
-      const major = i % 5 === 0;
-      const deg = -135 + 270 * (i / 60);
-      const [ax, ay] = polar(major ? 156 : 163, deg);
-      const [bx, by] = polar(171, deg);
-      const l = document.createElementNS(NS, 'line');
-      l.setAttribute('x1', ax.toFixed(2)); l.setAttribute('y1', ay.toFixed(2));
-      l.setAttribute('x2', bx.toFixed(2)); l.setAttribute('y2', by.toFixed(2));
-      l.setAttribute('class', 'g-tick' + (major ? ' is-major' : '') + (i >= 45 ? ' is-red' : ''));
-      svgTicks.appendChild(l);
-    }
-    for (let n = 0; n <= 12; n++) {
-      const [tx, ty] = polar(134, -135 + 270 * (n / 12));
-      const t = document.createElementNS(NS, 'text');
-      t.setAttribute('x', tx.toFixed(2)); t.setAttribute('y', ty.toFixed(2));
-      t.setAttribute('class', 'g-num' + (n >= 9 ? ' is-red' : ''));
-      t.textContent = n;
-      svgNums.appendChild(t);
-    }
-    return { needle: $('#gNeedle'), fill: $('#gFill'), speed: $('#gSpeed') };
-  }
-
-  const gaugeEls = buildGauge();
-  function renderGauge() {
-    if (!gaugeEls) return;
-    const v = Math.max(0, Math.min(1, G.v));
-    const deg = -135 + 270 * v;
-    gaugeEls.needle.setAttribute('transform', 'rotate(' + deg.toFixed(2) + ' 200 200)');
-    gaugeEls.fill.style.strokeDashoffset = (1 - v).toFixed(4);
-    const kmh = Math.round(Math.max(0, v - .1) / .9 * 240);
-    gaugeEls.speed.textContent = String(kmh).padStart(3, '0');
-  }
-  G.v = .09; renderGauge();
-
   // ----- utilidades de texto -----
   function splitWords(el) {
     const walk = (node) => {
@@ -456,50 +417,26 @@
       onEnter: (batch) => gsap.to(batch, { opacity: 1, y: 0, duration: 1, ease: 'power3.out', stagger: .1, overwrite: 'auto' })
     });
 
-    // ----- HERO: entrada -----
+    // ----- HERO: entrada (títulos, formulário, escudo neon, selo de preço, cartão de benefícios) -----
     const introTitle = $$('#heroTitle .line > span');
     gsap.set(introTitle, { yPercent: 112, y: 0 });
-    const intro = gsap.timeline({ defaults: { ease: 'power4.out' } });
-    intro
-      .to(introTitle, { yPercent: 0, duration: 1.15, stagger: .13 }, .05)
-      .fromTo('[data-hero="pill"]', { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .8 }, 0)
-      .fromTo('[data-hero="sub"]', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: .9 }, .5)
-      .fromTo('[data-hero="cta"]', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: .9 }, .62)
-      .fromTo('[data-hero="proof"]', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: .9 }, .76)
-      .fromTo('[data-hero="visual"]', { opacity: 0 }, { opacity: 1, duration: .9 }, .15)
-      .fromTo('.gauge__svg', { scale: .8, rotation: -14 }, { scale: 1, rotation: 0, duration: 1.5, ease: 'expo.out' }, .15)
-      .fromTo('.chip', { opacity: 0, scale: .6 }, { opacity: 1, scale: 1, duration: .8, stagger: .12, ease: 'back.out(1.7)' }, .95);
+    const shieldPaths = $$('.formscene__shield path');
+    gsap.set(shieldPaths, { strokeDashoffset: 1 });
+    gsap.set('.price', { scale: .6, rotation: -8 });
+    const perks = $$('.perk');
+    gsap.timeline({ defaults: { ease: 'power4.out' } })
+      .fromTo('.hero__arcs i', { opacity: 0, scale: .82 }, { opacity: 1, scale: 1, duration: 1.7, stagger: .15, ease: 'expo.out' }, 0)
+      .to(introTitle, { yPercent: 0, duration: 1.1, stagger: .12 }, .05)
+      .fromTo('[data-hero="pill"]', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .8 }, 0)
+      .fromTo('[data-hero="sub"]', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .9 }, .5)
+      .fromTo('[data-hero="form"]', { opacity: 0, y: 46, scale: .97 }, { opacity: 1, y: 0, scale: 1, duration: 1.1 }, .3)
+      .to(shieldPaths, { strokeDashoffset: 0, duration: 1.4, stagger: .25, ease: 'power2.inOut' }, .6)
+      .to('.price', { scale: 1, rotation: 2, duration: .9, ease: 'back.out(2)' }, 1.1)
+      .fromTo('[data-hero="perks"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9 }, .7)
+      .fromTo(perks, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .1 }, 1.0);
 
-    // "dar uma acelerada" ao abrir a página
-    G.v = 0; renderGauge();
-    gsap.timeline({ delay: .45, onComplete: () => { G.intro = false; } })
-      .to(G, { v: 1, duration: 1.05, ease: 'power2.in', onUpdate: renderGauge })
-      .to(G, { v: .09, duration: 1.6, ease: 'power3.out', onUpdate: renderGauge });
-
-    // ponteiro vivo: marcha lenta, reage ao scroll e ao hover do CTA
-    gsap.ticker.add((time) => {
-      if (G.intro || !G.visible) return;
-      const idle = .09 + Math.sin(time * 41) * .004 + Math.sin(time * 27) * .003;
-      const target = idle + G.scroll * .6 + G.hover * .72;
-      G.v += (target - G.v) * .09;
-      renderGauge();
-    });
-    ScrollTrigger.create({
-      trigger: '#hero', start: 'top top', end: 'bottom top',
-      onUpdate: (s) => { G.scroll = s.progress; },
-      onToggle: (s) => { G.visible = s.isActive; }
-    });
-    $$('#heroCta, .hero__cta .btn').forEach((b) => {
-      b.addEventListener('pointerenter', () => gsap.to(G, { hover: 1, duration: .5, overwrite: true }));
-      b.addEventListener('pointerleave', () => gsap.to(G, { hover: 0, duration: .9, overwrite: true }));
-    });
-
-    // parallax do hero ao rolar
-    gsap.to('#bgText', { xPercent: -8, yPercent: -10, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
-    gsap.to('.hero__visual', { y: -70, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
-
-    // ----- riscos de velocidade (canvas) -----
-    initStreaks();
+    // arcos vermelhos sobem devagar ao rolar
+    gsap.to('.hero__arcs i:nth-child(1)', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
 
     // ----- parallax de mouse no hero + cursor + botões magnéticos -----
     if (fine) {
@@ -515,20 +452,18 @@
       });
 
       const hero = $('#hero');
-      const gauge = $('#gauge');
-      const chips = $$('.chip');
-      const bg = $('#bgText');
+      const shield = $('.formscene__shield');
+      const arcs = $$('.hero__arcs i');
       hero.addEventListener('pointermove', (e) => {
         const r = hero.getBoundingClientRect();
         const nx = (e.clientX - r.left) / r.width - .5;
         const ny = (e.clientY - r.top) / r.height - .5;
-        gsap.to(gauge, { rotationY: nx * 14, rotationX: -ny * 14, transformPerspective: 900, duration: .9, ease: 'power3.out', overwrite: 'auto' });
-        chips.forEach((c) => gsap.to(c, { x: nx * (+c.dataset.depth) * 2.2, y: ny * (+c.dataset.depth) * 2.2, duration: 1, ease: 'power3.out', overwrite: 'auto' }));
-        gsap.to(bg, { x: nx * -40, duration: 1.2, ease: 'power3.out', overwrite: 'auto' });
+        if (shield) gsap.to(shield, { x: nx * -26, y: ny * -18, duration: 1, ease: 'power3.out', overwrite: 'auto' });
+        arcs.forEach((a, i) => gsap.to(a, { x: nx * (18 + i * 14), y: ny * (12 + i * 10), duration: 1.4, ease: 'power3.out', overwrite: 'auto' }));
       });
       hero.addEventListener('pointerleave', () => {
-        gsap.to(gauge, { rotationY: 0, rotationX: 0, duration: 1.1, ease: 'power3.out' });
-        gsap.to(chips, { x: 0, y: 0, duration: 1.1, ease: 'power3.out' });
+        if (shield) gsap.to(shield, { x: 0, y: 0, duration: 1.2, ease: 'power3.out' });
+        gsap.to(arcs, { x: 0, y: 0, duration: 1.4, ease: 'power3.out' });
       });
 
       $$('[data-magnetic]').forEach((el) => {
@@ -643,52 +578,6 @@
     const refresh = () => ScrollTrigger.refresh();
     window.addEventListener('load', refresh);
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(refresh);
-  }
-
-  // ----- riscos de velocidade -----
-  function initStreaks() {
-    const cv = $('#streaks');
-    if (!cv || reduce) return;
-    const ctx = cv.getContext('2d');
-    const many = window.innerWidth >= 900;
-    const N = many ? 42 : 16;
-    let w = 0, h = 0, dpr = 1, lines = [];
-
-    const spawn = (initial) => ({
-      x: initial ? Math.random() * w : -Math.random() * 300 - 100,
-      y: Math.random() * h,
-      len: 90 + Math.random() * 300,
-      sp: 3 + Math.random() * 9,
-      a: .05 + Math.random() * .2,
-      wd: Math.random() < .2 ? 2 : 1,
-      red: Math.random() < .6
-    });
-    const resize = () => {
-      dpr = Math.min(window.devicePixelRatio || 1, 2);
-      w = cv.clientWidth; h = cv.clientHeight;
-      cv.width = w * dpr; cv.height = h * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      lines = Array.from({ length: N }, () => spawn(true));
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
-    gsap.ticker.add(() => {
-      if (!G.visible) return;
-      ctx.clearRect(0, 0, w, h);
-      const boost = 1 + G.v * 2.4;
-      for (let i = 0; i < lines.length; i++) {
-        const l = lines[i];
-        l.x += l.sp * boost;
-        if (l.x - l.len > w) lines[i] = spawn(false);
-        const g = ctx.createLinearGradient(l.x - l.len, 0, l.x, 0);
-        const c = l.red ? '255,58,63' : '255,255,255';
-        g.addColorStop(0, 'rgba(' + c + ',0)');
-        g.addColorStop(1, 'rgba(' + c + ',' + (l.a * (.7 + G.v)).toFixed(3) + ')');
-        ctx.fillStyle = g;
-        ctx.fillRect(l.x - l.len, l.y, l.len, l.wd);
-      }
-    });
   }
 
   /* ------------------------------------------------------------------ *

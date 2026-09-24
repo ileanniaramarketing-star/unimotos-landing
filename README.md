@@ -1,6 +1,6 @@
 # Unimotos · Landing pages de campanha (proteção veicular)
 
-Duas páginas de campanha, com o mesmo visual (vermelho e preto) e conversão por **cotação pela placa**:
+Duas páginas de campanha, no mesmo visual da arte da campanha (vermelho e preto, cartão branco de benefícios, escudo neon, selo de preço), com o **formulário de cotação pela placa no topo da página**, ao lado do título:
 
 | Rota | Página |
 |---|---|
@@ -67,14 +67,16 @@ scripts/            serve.js (servidor + /api/lead), build.js, vault.ps1, lib/ (
 1. **WhatsApp**: `js/config.js → whatsapp` está com número de teste (`5500000000000`). Trocar pelo real.
 2. **Conferir com o cliente** os textos e números baseados no site institucional da associação: *15 anos, +5.000 veículos reparados,
    +4.800 indenizações pagas* (`stats`), endereço, coberturas (roubo e furto, colisão, incêndio, fenômenos naturais, perda total),
-   "até 100% da tabela FIPE", "sem análise de perfil", carro reserva e KM livre "conforme o plano". Aviso legal no rodapé:
+   "Pagamos 100% da FIPE" e "Guincho todo o Brasil" (vieram da arte da campanha), "sem análise de perfil", carro reserva e KM livre "conforme o plano". Aviso legal no rodapé:
    associação de proteção veicular, **não é seguro**, Lei Complementar nº 213/2025.
-3. **Logo**: hoje é um wordmark em HTML/CSS (`.wordmark`). Trocar pelo logo oficial quando houver arquivo.
-4. **Rastreamento** (`gtmId`, `metaPixelId`, `ga4Id`): preencher só o que for usar. Eventos: `whatsapp_click` (Meta: Contact) e `generate_lead` (Meta: Lead), com `veiculo`.
+3. **Selo de preço**: `price` em `js/config.js` (`carro: "56"` vem da arte; `moto` está vazio, sem selo). Com valor, aparece "a partir de R$ X/mês" no hero e a observação "sujeito ao modelo, ano e valor FIPE" no rodapé.
+4. **Foto do veículo**: a arte usa foto do carro sobre piso vermelho. O hero ainda não tem foto (o formulário ocupa o lugar do antigo velocímetro); quando houver as fotos em PNG com fundo transparente, elas entram no hero/seções.
+5. **Logo**: hoje é um wordmark em HTML/CSS (`.wordmark`). Trocar pelo logo oficial quando houver arquivo.
+6. **Rastreamento** (`gtmId`, `metaPixelId`, `ga4Id`): preencher só o que for usar. Eventos: `whatsapp_click` (Meta: Contact) e `generate_lead` (Meta: Lead), com `veiculo`.
    Nome, telefone e placa **não** vão ao Pixel/GA.
-5. **Prévia de link** (`og:image`): use a URL absoluta do domínio (ex.: `https://seudominio.com.br/assets/og-motos.jpg`).
-6. **Indexação**: as páginas vêm com `noindex,nofollow` (padrão de página de anúncio). Trocar por `index,follow` se quiser aparecer no Google.
-7. **Consulta automática da placa** (opcional): `plateLookupUrl` aponta para um endpoint SEU que guarda a chave do provedor
+7. **Prévia de link** (`og:image`): use a URL absoluta do domínio (ex.: `https://seudominio.com.br/assets/og-motos.jpg`).
+8. **Indexação**: as páginas vêm com `noindex,nofollow` (padrão de página de anúncio). Trocar por `index,follow` se quiser aparecer no Google.
+9. **Consulta automática da placa** (opcional): `plateLookupUrl` aponta para um endpoint SEU que guarda a chave do provedor
    (não existe API pública gratuita; há provedores com teste/limite gratuito). Vazio = só coleta a placa.
 
 ## Rodar local
