@@ -8,6 +8,7 @@ const out = path.join(root, 'dist');
 const PUBLIC = ['index.html', 'motos', 'carros', 'css', 'js', 'assets'];
 
 function build() {
+  require('./version-assets').run(); // CSS/JS com ?v=hash: nunca fica "velho" em cache depois de um deploy
   fs.rmSync(out, { recursive: true, force: true });
   fs.mkdirSync(out, { recursive: true });
   for (const item of PUBLIC) {

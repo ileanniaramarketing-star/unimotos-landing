@@ -104,13 +104,23 @@ function serveStatic(req, res, p) {
     }
     if (err || !st.isFile()) { res.writeHead(404, Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, SEC)); res.end('404 - página não encontrada'); return; }
     const ext = path.extname(file).toLowerCase();
-    const headers = Object.assign({
-      'Content-Type': MIME[ext] || 'application/octet-stream',
-      'Cache-Control': SRC ? 'no-store' : (ext === '.html' ? 'no-cache' : 'public, max-age=3600')
-    }, SEC);
+    // Cache: HTML/CSS/JS SEMPRE revalidam (nunca ficam "velhos" depois de um deploy); só arquivos com
+    // versão no endereço (?v=hash, gerado por scripts/version-assets.js) podem ficar em cache por 1 ano.
+    const query = req.url.indexOf('?') > -1 ? req.url.slice(req.url.indexOf('?') + 1) : '';
+    const versioned = /(^|&)v=[0-9a-f]{6,}(&|$)/.test(query);
+    let cache;
+    if (SRC) cache = 'no-store';
+    else if (versioned) cache = 'public, max-age=31536000, immutable';
+    else if (['.html', '.css', '.js', '.json', '.txt'].includes(ext)) cache = 'no-cache';
+    else cache = 'public, max-age=86400';
+    const wantsGzip = COMPRESSIBLE.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] || '');
+    const etag = 'W/"' + st.size.toString(16) + '-' + Math.round(st.mtimeMs).toString(16) + (wantsGzip ? '-gz' : '') + '"';
+    const headers = Object.assign({ 'Content-Type': MIME[ext] || 'application/octet-stream', 'Cache-Control': cache }, SEC);
+    if (!SRC) headers.ETag = etag;
+    if (!SRC && req.headers['if-none-match'] === etag) { res.writeHead(304, headers); res.end(); return; }
     fs.readFile(file, (e, buf) => {
       if (e) { res.writeHead(500, SEC); res.end('erro'); return; }
-      if (COMPRESSIBLE.has(ext) && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      if (wantsGzip) {
         const key = file + ':' + st.mtimeMs;
         if (!gz.has(key)) gz.set(key, zlib.gzipSync(buf, { level: 9 }));
         headers['Content-Encoding'] = 'gzip'; headers['Vary'] = 'Accept-Encoding';

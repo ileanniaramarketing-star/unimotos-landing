@@ -10,7 +10,8 @@
     "dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 run -- node scripts/serve.js --src --host 127.0.0.1 --port 4321",
     "dev:plain": "node scripts/serve.js --src --host 127.0.0.1 --port 4321",
     "vault": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1",
-    "check:secrets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 scan"
+    "check:secrets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 scan",
+    "assets:version": "node scripts/version-assets.js"
   },
   "engines": {
     "node": ">=18"

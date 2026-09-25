@@ -108,6 +108,13 @@ WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar po
 
 Depois de publicar, `https://SEU-DOMINIO/api/health` deve responder `{"ok":true,"crm":"live"}`.
 
+## Cache (por que a página não fica "quebrada" depois de um deploy)
+
+CSS/JS são referenciados com versão do conteúdo (`/css/style.css?v=3fa9c1d2`, feito por `scripts/version-assets.js`).
+Mudou o arquivo, muda o endereço: navegador e CDN buscam a versão nova. O servidor manda HTML/CSS/JS sempre com revalidação
+(`no-cache` + ETag) e só deixa em cache de 1 ano o que tem `?v=`. O `npm run build` e o pre-commit atualizam as versões sozinhos;
+manualmente: `npm run assets:version`. Sem isso, um celular podia receber a página nova com o CSS antigo (ícones gigantes, espaços vazios).
+
 ## Acessibilidade e desempenho
 
 Respeita `prefers-reduced-motion`, funciona sem JavaScript (o conteúdo aparece), efeitos pesados são reduzidos no celular e a rolagem horizontal fixa só liga em telas ≥ 980px.
