@@ -1,5 +1,5 @@
 {
-  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. API: POST /api/quotation/add (validado em 25/09/2026 com uma cotação de teste). A cotação entra na coluna 'Cotação Recebida' do funil, atribuída ao consultor cujo PowerLink está em sellers[].code. Falta: PowerLink do Vitor e da Kathleen.",
+  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. API: POST /api/quotation/add (validado em 25/09/2026 com uma cotação de teste). A cotação entra na coluna 'Cotação Recebida' do funil, atribuída ao consultor cujo PowerLink está em sellers[].code. Rodízio: Vitor e Kethlen (PowerLinks obtidos por POST /api/consultant/powerlink). Falta só decidir a cooperativa das motos e o UTM/tags.",
   "baseUrl": "https://api.powercrm.com.br",
   "auth": {
     "header": "Authorization",
@@ -11,12 +11,12 @@
   "sellers": [
     {
       "name": "Vitor",
-      "code": null,
+      "code": "ArzMy08D",
       "active": true
     },
     {
-      "name": "Kathleen",
-      "code": null,
+      "name": "Kethlen",
+      "code": "orgpm2mE",
       "active": true
     },
     {
@@ -60,7 +60,7 @@
       "Betim": 1636,
       "Ribeirão das Neves": 2201
     },
-    "consultores": "POST /api/consultant/powerlink {email|phone} devolve { powerlinkId, name, email, phone, powerlinks:[{name,link}], powerlinkAffiliate }. O 'powerlinkId' (ex.: vrXbVKeq) é o código do consultor: vai no campo pwrlnk (e como 'id=' nos links, ex.: https://unimotoscarbrasil.com.br/?id=vrXbVKeq). Ilean (teste) já resolvida; faltam Vitor e Kathleen (e-mail ou WhatsApp cadastrados no Power CRM).",
+    "consultores": "Vitor Torres Braga Moura (Consultor) = ArzMy08D; Kethlen Oliveira Peixoto (Vendedor) = orgpm2mE; Ilean (teste, inativa) = vrXbVKeq. PowerLink obtido por POST /api/consultant/powerlink {email} (o e-mail NÃO é guardado aqui).",
     "placa": "GET /api/quotation/plates/{plate} devolve os dados do veículo (pode preencher mdl/mdlYr sem o cliente escolher)",
     "mover": "POST /api/quotation/card/move?cardColumn=&quotationCode= move o card de coluna do funil",
     "naoUsar": "/api/powerbi/* devolve dados de MUITAS empresas com este token; não consultar",
