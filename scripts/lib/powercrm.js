@@ -1,15 +1,15 @@
 'use strict';
 /*
   Integração com o Power CRM — roda SÓ no servidor.
+  Endpoint (validado com uma cotação de teste real): POST {baseUrl}/api/quotation/add  (Authorization: Bearer <token>)
+  A cotação entra sozinha na coluna "Cotação Recebida" do funil, atribuída ao consultor do PowerLink (slsmnNwId).
+
   O token vem de process.env.POWERCRM_TOKEN (cofre local via scripts/vault.ps1, ou variável de
   ambiente do painel da hospedagem). Ele nunca é enviado ao navegador, nunca é logado.
 
-  Cada veículo (moto / carro) pode ter etapa de funil e vendedores próprios (config/powercrm.json,
-  bloco "products"); o que não for definido ali herda o bloco global.
-
   Modos (ver /api/health):
     no_token        sem POWERCRM_TOKEN: não envia nada
-    not_configured  falta preencher config/powercrm.json
+    not_configured  falta preencher config/powercrm.json (consultores com PowerLink, cidade padrão…)
     dry-run         tudo configurado, mas POWERCRM_LIVE != 1: só registra o que enviaria (padrão local)
     live            POWERCRM_LIVE=1: envia de verdade
 */
@@ -30,10 +30,11 @@ const token = () => process.env.POWERCRM_TOKEN || '';
 const redact = (s) => { const t = token(); return t ? String(s).split(t).join('[REDACTED]') : String(s); };
 const log = (...a) => console.log('[powercrm]', ...a.map((x) => redact(typeof x === 'string' ? x : JSON.stringify(x))));
 
-// etapa/vendedores efetivos de um veículo (bloco do produto sobrepõe o global)
+// consultores/coop efetivos de um veículo (o bloco do produto sobrepõe o global)
 function resolve(cfg, veiculo) {
   const p = (cfg.products && cfg.products[veiculo]) || {};
-  return { funnelStageId: p.funnelStageId || cfg.funnelStageId, sellers: p.sellers || cfg.sellers || [] };
+  const d = cfg.defaults || {};
+  return { sellers: p.sellers || cfg.sellers || [], coop: p.coop != null ? p.coop : d.coop, cityId: p.cityId || d.cityId };
 }
 
 function missingConfig(cfg, veiculo) {
@@ -41,11 +42,10 @@ function missingConfig(cfg, veiculo) {
   if (!cfg.baseUrl) m.push('baseUrl');
   if (!cfg.auth || !cfg.auth.header) m.push('auth.header');
   if (!cfg.endpoints || !cfg.endpoints.createQuotation) m.push('endpoints.createQuotation');
-  ['nome', 'telefone', 'placa'].forEach((k) => { if (!cfg.fieldMap || !cfg.fieldMap[k]) m.push('fieldMap.' + k); });
   const r = resolve(cfg, veiculo);
-  if (!r.funnelStageId) m.push(veiculo + ': funnelStageId');
+  if (!r.cityId) m.push(veiculo + ': defaults.cityId');
   const active = r.sellers.filter((s) => s.active);
-  if (!active.length || active.some((s) => !s.code)) m.push(veiculo + ': sellers[].code');
+  if (!active.length || active.some((s) => !s.code)) m.push(veiculo + ': sellers[].code (PowerLink do consultor)');
   return m;
 }
 
@@ -59,7 +59,7 @@ function status(veiculo) {
   return { state: process.env.POWERCRM_LIVE === '1' ? 'live' : 'dry-run' };
 }
 
-// Rodízio por veículo: alterna entre os vendedores ativos. Contador em .data/ (se não der para gravar, segue em memória).
+// Rodízio por veículo: alterna entre os consultores ativos. Contador em .data/ (se não der para gravar, segue em memória).
 const memNext = {};
 function pickSeller(sellers, veiculo) {
   const active = sellers.filter((s) => s.active);
@@ -73,18 +73,36 @@ function pickSeller(sellers, veiculo) {
   return seller;
 }
 
-function buildBody(cfg, lead, seller, stageId) {
-  const f = cfg.fieldMap, body = {};
-  const put = (k, v) => { if (f[k] && v != null && v !== '') body[f[k]] = v; };
-  put('nome', lead.nome);
-  put('telefone', lead.telefone);
-  put('placa', lead.placa);
-  put('veiculo', lead.veiculo);
-  put('origem', cfg.origin);
-  put('subOrigem', [lead.veiculo, [lead.utm_source, lead.utm_campaign].filter(Boolean).join(' / ') || 'orgânico/direto'].join(' · '));
-  put('etapa', stageId);
-  put('vendedor', seller.code);
-  put('observacao', 'Lead da landing page /' + lead.veiculo + 's (cotação pela placa)' + (lead.utm_content ? ' · anúncio: ' + lead.utm_content : ''));
+// "5531987654321" -> "(31) 98765-4321" (mesmo formato que o Power CRM mostra)
+function maskPhone(e164) {
+  let d = String(e164 || '').replace(/\D/g, '');
+  if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
+  const ddd = d.slice(0, 2), n = d.slice(2);
+  return '(' + ddd + ') ' + (n.length === 9 ? n.slice(0, 5) + '-' + n.slice(5) : n.slice(0, 4) + '-' + n.slice(4));
+}
+
+// origem da cotação no CRM a partir da fonte do tráfego (utm_source)
+function originFor(cfg, lead) {
+  const o = cfg.origins || {};
+  const src = String(lead.utm_source || '').toLowerCase();
+  if (/insta|face|meta|^fb$|^ig$/.test(src) && o.social) return o.social;
+  if (/google|gads|adwords/.test(src) && o.google) return o.google;
+  return o.default;
+}
+
+function buildBody(cfg, lead, seller, r) {
+  const body = {
+    name: lead.nome,
+    phone: maskPhone(lead.telefone),
+    plts: lead.placa,
+    city: r.cityId,
+    origemId: originFor(cfg, lead),
+    slsmnNwId: seller.code,       // PowerLink do consultor = quem recebe o lead
+    workVehicle: false
+  };
+  if (r.coop != null) body.coop = r.coop;      // cooperativa/filial (ex.: CLUB-UNIMOTOS.CAR), se configurada
+  if (lead.email) body.email = lead.email;     // o formulário da LP não pede e-mail; entra só se existir
+  if (lead.marca_id) body.mdl = lead.marca_id; // reservado: preenchimento por consulta de placa
   return body;
 }
 
@@ -116,15 +134,15 @@ async function sendLead(lead) {
   const cfg = loadCfg();
   const r = resolve(cfg, veiculo);
   const seller = pickSeller(r.sellers, veiculo);
-  const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r.funnelStageId);
+  const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r);
 
   if (st.state === 'dry-run') {
-    log('DRY-RUN (nada foi enviado) · ' + veiculo + ' · vendedor:', seller.name, '· corpo:', body);
+    log('DRY-RUN (nada foi enviado) · ' + veiculo + ' · consultor:', seller.name, '· corpo:', body);
     return { state: 'dry-run', seller: seller.name };
   }
   const delays = [0, 5000, 30000, 120000];
   const attempt = async (i) => {
-    try { const code = await post(cfg, body); log('enviado · ' + veiculo + ' · vendedor:', seller.name, '· HTTP', code); return true; }
+    try { const code = await post(cfg, body); log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', code); return true; }
     catch (e) {
       log('falha (tentativa ' + (i + 1) + '/' + delays.length + '):', e.name === 'AbortError' ? 'timeout' : e.message);
       if (i + 1 < delays.length) setTimeout(() => attempt(i + 1), delays[i + 1]);
@@ -135,4 +153,4 @@ async function sendLead(lead) {
   return { state: ok ? 'sent' : 'retrying', seller: seller.name };
 }
 
-module.exports = { sendLead, status };
+module.exports = { sendLead, status, maskPhone, originFor };

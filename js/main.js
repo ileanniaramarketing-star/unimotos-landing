@@ -129,7 +129,11 @@
     const price = (cfg.price || {})[VEHICLE];
     if (price) {
       const txt = String(price).replace('.', ',');
+      // "55,36" -> 55.36 (vírgula decimal; ponto só como milhar quando há vírgula)
+      const num = /,/.test(String(price)) ? parseFloat(String(price).replace(/\./g, '').replace(',', '.')) : parseFloat(price);
       $('#priceValue').textContent = txt;
+      const day = $('#priceDay');
+      if (day) { if (num > 0) day.textContent = 'Menos de R$ ' + (Math.floor(num / 30) + 1) + ',00 por dia'; else day.hidden = true; }
       $('#heroPrice').hidden = false;
       const note = $('#priceNote');
       if (note) { note.textContent = 'Valor a partir de R$ ' + txt + '/mês, sujeito ao modelo, ano e valor FIPE do veículo. Consulte condições.'; note.hidden = false; }
@@ -434,6 +438,25 @@
       .to('.price', { scale: 1, rotation: 2, duration: .9, ease: 'back.out(2)' }, 1.1)
       .fromTo('[data-hero="perks"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9 }, .7)
       .fromTo(perks, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .1 }, 1.0);
+
+    // ----- OFERTA: "Outubro" é riscado, sobe e some; "Novembro" (e o "Somente") entram e ficam fixos -----
+    const offer = $('#offer');
+    if (offer && !reduce) {
+      const old = $('.ofr__old', offer), strike = $('.ofr__strike', offer), neu = $('.ofr__new', offer), month = $('.ofr__month', offer), some = $('.ofr__some', offer);
+      gsap.delayedCall(1.9, () => {
+        const oldW = old.offsetWidth, newW = neu.offsetWidth, someW = some.scrollWidth;
+        gsap.set(month, { width: oldW });
+        gsap.set(neu, { yPercent: 100, y: 0, opacity: 0 });
+        const finish = () => { offer.classList.add('is-done'); gsap.set([month, old, neu, some, strike], { clearProps: 'all' }); };
+        gsap.timeline({ defaults: { ease: 'power3.out' }, onComplete: finish })
+          .to(strike, { scaleX: 1, duration: .5, ease: 'power2.inOut' }, .9)   // risca o mês
+          .to(old, { opacity: .45, duration: .3 }, 1.0)
+          .to(old, { yPercent: -100, opacity: 0, duration: .5, ease: 'power3.in' }, 1.75)
+          .to(neu, { yPercent: 0, opacity: 1, duration: .6, ease: 'back.out(1.6)' }, 1.85)
+          .to(month, { width: newW, duration: .5, ease: 'power3.inOut' }, 1.85)
+          .to(some, { maxWidth: someW, opacity: 1, duration: .55 }, 1.85);
+      });
+    }
 
     // arcos vermelhos sobem devagar ao rolar
     gsap.to('.hero__arcs i:nth-child(1)', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });

@@ -53,9 +53,10 @@ window.UNI_CONFIG = {
   },
 
   /* --- Selo de preço do hero ("a partir de R$ X/mês") -------------------- */
-  // Vem da arte da campanha de carros (R$ 56/mês). Moto: preencher quando houver o valor.
+  // Valor mensal em formato brasileiro (vírgula), ex.: "55,36". O selo mostra "Proteção a partir de / R$ X/mês /
+  // Menos de R$ N,00 por dia" (o "por dia" é calculado: valor ÷ 30). Moto: preencher quando houver o valor.
   // Vazio = o selo não aparece. Mostra também a observação de rodapé "sujeito ao modelo, ano e FIPE".
-  price: { moto: "", carro: "56" },
+  price: { moto: "", carro: "55,36" },
 
   /* --- Números institucionais (seção "stats") ---------------------------- */
   // ⚠️ Retirados do site institucional da associação: CONFIRMAR com o cliente antes de publicar.

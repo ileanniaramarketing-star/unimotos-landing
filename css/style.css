@@ -156,7 +156,6 @@ body::after {
 .nav__links a:hover { color: #fff; }
 .nav__links a:hover::after { transform: scaleX(1); }
 @media (min-width: 900px) { .nav__links { display: flex; } }
-@media (max-width: 420px) { .nav .btn span { font-size: .85rem; } .nav .btn--sm { padding: 0 .95rem; } }
 
 .wordmark { display: inline-flex; align-items: center; gap: .65rem; }
 .wordmark__slash { display: inline-flex; gap: 3px; transform: skewX(-22deg); }
@@ -167,6 +166,7 @@ body::after {
 
 /* ---------- HERO (arte: arcos vermelhos, escudo neon, cartão branco, formulário à direita) ---------- */
 .hero {
+  --form-w: clamp(400px, 34vw, 460px);
   position: relative; overflow: hidden;
   padding: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 28px) 0 clamp(48px, 6vw, 84px);
   background:
@@ -186,11 +186,21 @@ body::after {
 .hero__formwrap { grid-area: form; }
 .perks-wrap { grid-area: perks; }
 @media (min-width: 980px) {
-  .hero__inner { grid-template-columns: 1.02fr .98fr; grid-template-areas: "copy form" "perks form"; grid-template-rows: auto 1fr; column-gap: clamp(36px, 5vw, 76px); row-gap: 34px; align-items: start; }
-  .hero__formwrap { align-self: center; }
-  .hero__copy { align-self: start; padding-top: clamp(0px, 3vh, 30px); }
+  .hero__inner { grid-template-columns: minmax(0, 1fr) minmax(0, var(--form-w)); grid-template-areas: "copy form" "perks form"; grid-template-rows: auto 1fr; column-gap: clamp(36px, 5vw, 76px); row-gap: 0; align-items: start; }
+  .hero__copy { align-self: start; padding-bottom: 26px; }
   .perks-wrap { align-self: end; }
+  /* o formulário acompanha a altura da coluna da esquerda: o fundo dele alinha com a base da faixa dos benefícios.
+     O espaço extra (se houver) é distribuído entre os blocos do formulário. */
+  .hero__formwrap { align-self: stretch; }
+  .formscene { height: 100%; display: flex; flex-direction: column; }
+  .formscene .form { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .formscene .aform__steps:not([hidden]) { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: space-between; }
+  .formscene .fsuccess:not([hidden]) { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  /* a nota "conforme as condições" fica pendurada abaixo da faixa (não conta na altura usada no alinhamento) */
+  .extras { position: relative; }
+  .extras__note { position: absolute; left: 0; right: 0; top: 100%; margin-top: 7px; }
 }
+@media (min-width: 561px) and (max-width: 979px) { .hero__formwrap { max-width: 540px; } }
 
 .pill {
   display: inline-flex; align-items: center; gap: .65rem;
@@ -207,24 +217,29 @@ body::after {
 .hero__title .line { display: block; overflow: hidden; white-space: nowrap; padding: .1em 0 .2em; margin: -.1em 0 -.2em; }
 .hero__title .line > span { display: inline-block; will-change: transform; }
 .hero__title .hl { padding-right: .06em; background: linear-gradient(180deg, #ff5a52, #e8202a 70%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
-.hero__sub { margin-top: 1.3rem; max-width: 44ch; font-size: clamp(1.02rem, 1.4vw, 1.15rem); color: #d2d0ce; }
+.hero__sub { margin-top: 1.3rem; max-width: 30ch; font-size: clamp(1.1rem, 1.7vw, 1.35rem); font-weight: 700; line-height: 1.35; color: #fff; text-wrap: balance; }
 
-/* cartão branco de benefícios (como na arte) */
-.perks { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; color: #17171a; border-radius: 26px; padding: 18px 6px; box-shadow: 0 40px 90px -36px rgba(227, 27, 35, .75); }
-.perk { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 8px; text-align: center; font-weight: 800; font-size: .86rem; line-height: 1.15; text-wrap: balance; }
+/* cartão branco de benefícios (como na arte) — compacto: ícone ao lado do texto */
+.perks { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; color: #17171a; border-radius: 20px; padding: 9px 4px; box-shadow: 0 40px 90px -36px rgba(227, 27, 35, .75); }
+.perk { display: flex; flex-direction: row; align-items: center; gap: 10px; padding: 2px 10px; text-align: left; font-weight: 800; font-size: .8rem; line-height: 1.15; text-wrap: balance; }
 .perk + .perk { border-left: 1px solid rgba(23, 23, 26, .12); }
-.perk__ico { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 18px; background: #fde9e9; color: #e01e26; }
-.perk__ico svg { width: 28px; height: 28px; }
+.perk__ico { flex: none; width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: #fde9e9; color: #e01e26; }
+.perk__ico svg { width: 21px; height: 21px; }
+@media (min-width: 980px) and (max-width: 1199px) {
+  .perk { flex-direction: column; text-align: center; gap: 5px; padding: 2px 4px; font-size: .72rem; }
+  .perk__ico { width: 32px; height: 32px; }
+  .perk__ico svg { width: 18px; height: 18px; }
+}
 @media (max-width: 560px) {
-  .perks { grid-template-columns: repeat(2, 1fr); row-gap: 16px; padding: 16px 4px; }
+  .perks { grid-template-columns: repeat(2, 1fr); row-gap: 6px; padding: 8px 2px; }
   .perk:nth-child(3) { border-left: 0; }
-  .perk:nth-child(n + 3) { border-top: 1px solid rgba(23, 23, 26, .12); padding-top: 14px; }
+  .perk:nth-child(n + 3) { border-top: 1px solid rgba(23, 23, 26, .12); padding-top: 8px; }
 }
 
 /* formulário no hero: escudo neon atrás + selo de preço */
 .formscene { position: relative; }
 .formscene .form { position: relative; z-index: 1; padding: clamp(22px, 2.6vw, 34px); background: linear-gradient(180deg, rgba(24, 24, 27, .72), rgba(10, 10, 12, .82)); }
-.formscene__shield { position: absolute; z-index: 0; left: 50%; top: 47%; width: 148%; max-width: none; translate: -50% -50%; pointer-events: none; filter: drop-shadow(0 0 34px rgba(255, 42, 42, .8)); animation: shieldGlow 4.5s ease-in-out infinite; }
+.formscene__shield { position: absolute; z-index: 0; left: 50%; top: 47%; width: 162%; max-width: none; translate: -50% -50%; pointer-events: none; filter: drop-shadow(0 0 34px rgba(255, 42, 42, .8)); animation: shieldGlow 4.5s ease-in-out infinite; }
 .sh-o { fill: rgba(227, 27, 35, .16); stroke: #ff4a4a; stroke-width: 6; stroke-linejoin: round; }
 .sh-i { fill: none; stroke: rgba(255, 120, 120, .9); stroke-width: 3; stroke-linejoin: round; }
 .sh-c { fill: none; stroke: #ff5a52; stroke-width: 16; stroke-linecap: round; stroke-linejoin: round; }
@@ -233,13 +248,17 @@ body::after {
 .js .sh-o, .js .sh-i, .js .sh-c { stroke-dasharray: 1; stroke-dashoffset: 1; animation: failD 0s 3.4s forwards; }
 @keyframes failD { to { stroke-dashoffset: 0; } }
 
-.price { position: absolute; z-index: 3; top: -22px; right: -14px; padding: 12px 18px 12px 16px; border-radius: 16px; background: linear-gradient(180deg, #ff3b3b, #d80f18); border: 1px solid rgba(255, 255, 255, .3); box-shadow: 0 18px 50px -12px rgba(227, 27, 35, .9), inset 0 0 0 1px rgba(255, 255, 255, .12); color: #fff; line-height: 1; transform: rotate(2deg); }
+.price { position: absolute; z-index: 3; top: -22px; right: -14px; --py: 10px; --pl: 14px; --pr: 16px; --rad: 15px; padding: var(--py) var(--pr) var(--py) var(--pl); border-radius: 16px; background: linear-gradient(180deg, #ff3b3b, #d80f18); border: 1px solid rgba(255, 255, 255, .3); box-shadow: 0 18px 50px -12px rgba(227, 27, 35, .9), inset 0 0 0 1px rgba(255, 255, 255, .12); color: #fff; line-height: 1; transform: rotate(2deg); }
 .price[hidden] { display: none; }
-.price small { display: block; margin-bottom: 4px; font-weight: 700; font-size: .78rem; }
-.price strong { display: flex; align-items: baseline; gap: 4px; font-family: var(--f-head); font-weight: 800; font-size: 1.15rem; }
-.price b { font-size: 2.5rem; font-weight: 900; letter-spacing: -.04em; }
-.price em { font-style: normal; font-weight: 800; font-size: 1rem; }
-@media (max-width: 979px) { .price { top: -30px; right: 8px; padding: 9px 14px 9px 12px; border-radius: 14px; } .price small { font-size: .7rem; margin-bottom: 2px; } .price b { font-size: 2rem; } .hero__inner { row-gap: 36px; } }
+.price small { display: block; margin-bottom: 4px; font-weight: 700; font-size: .78rem; white-space: nowrap; }
+.price strong { display: flex; align-items: baseline; gap: 0; font-family: var(--f-head); font-weight: 800; font-size: 1.05rem; white-space: nowrap; }
+.price b { font-size: 2rem; font-weight: 900; letter-spacing: -.04em; }
+.price strong span { margin-right: 5px; }
+.price em { font-style: normal; font-weight: 800; font-size: .95rem; }
+/* faixa branca no rodapé do selo, com texto preto (destaca o "por dia"): sangra até a borda do selo */
+.price__day { display: block; margin: 9px calc(-1 * var(--pr)) calc(-1 * var(--py)) calc(-1 * var(--pl)); padding: 8px var(--pr) 8px var(--pl); background: #fff; color: #121214; border-radius: 0 0 var(--rad) var(--rad); font-weight: 800; font-size: .78rem; white-space: nowrap; }
+.price__day[hidden] { display: none; }
+@media (max-width: 979px) { .price { top: -30px; right: 8px; --py: 8px; --pl: 12px; --pr: 12px; --rad: 13px; border-radius: 14px; } .price small { font-size: .75rem; margin-bottom: 3px; } .price strong { font-size: 1rem; } .price b { font-size: 1.85rem; } .price__day { font-size: .75rem; margin-top: 7px; padding-top: 6px; padding-bottom: 6px; } .hero__inner { row-gap: 40px; } }
 @media (max-width: 560px) { .aform__sub { display: none; } .aform__title { padding-right: 96px; } }
 
 .aform__sub { margin: -10px 0 20px; color: var(--muted); font-size: .95rem; }
@@ -552,11 +571,10 @@ body::after {
 .link { min-height: 44px; }
 .footer__col a { display: inline-flex; align-items: center; min-height: 44px; }
 .footer__col h4 { font-size: .78rem; }
-.price small { font-size: .75rem; }
 @media (max-width: 900px) { body::after { display: none; } .nav.is-solid { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); } }
 @media (max-width: 560px) {
   .hero { padding-top: calc(var(--nav-h) + env(safe-area-inset-top, 0px) + 12px); padding-bottom: 36px; }
-  .hero__sub { display: none; }
+  .hero__sub { margin-top: .7rem; max-width: none; font-size: 1.02rem; }
   .hero .pill { margin-bottom: 1rem; padding: 7px 13px 7px 10px; font-size: .74rem; }
   .hero__inner { row-gap: 30px; gap: 26px; }
   .hero__arcs i:nth-child(1) { box-shadow: 0 0 40px rgba(227, 27, 35, .45), inset 0 0 40px rgba(227, 27, 35, .3); }
@@ -589,7 +607,140 @@ body::after {
   .btn--xl { --h: 60px; font-size: 1.05rem; }
 }
 @media (max-width: 360px) {
-  .nav .btn .ico { display: none; }
-  .nav .btn--sm { padding: 0 .9rem; }
   .hero__title { font-size: 2.05rem; }
 }
+
+/* ---------- BENEFÍCIOS + COBERTURAS (listas do cliente) ---------- */
+.bnf-grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .bnf-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+@media (min-width: 980px) { .bnf-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; } }
+.bnf { flex-direction: row; align-items: center; gap: 18px; padding: 20px 22px; min-height: 96px; }
+.bnf .card__icon { flex: none; }
+.bnf h3 { font-size: clamp(1.05rem, 1.5vw, 1.25rem); line-height: 1.2; }
+
+.cov { background: #fff; color: #17171a; border-radius: 30px; padding: clamp(18px, 3vw, 38px); box-shadow: 0 40px 90px -36px rgba(227, 27, 35, .65); }
+.cov__grid { display: grid; gap: 12px; grid-template-columns: repeat(2, 1fr); }
+@media (min-width: 760px) { .cov__grid { grid-template-columns: repeat(3, 1fr); gap: 16px; } }
+.cov__item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 18px; background: #faf5f5; border: 1px solid rgba(23, 23, 26, .06); font-weight: 800; line-height: 1.2; font-size: 1rem; }
+.cov__ico { flex: none; width: 48px; height: 48px; display: grid; place-items: center; border-radius: 15px; background: #fde9e9; color: #e01e26; }
+.cov__ico svg { width: 26px; height: 26px; }
+.cov__item--more { background: linear-gradient(135deg, #ff3b3b, #c40d16); color: #fff; border-color: transparent; }
+.cov__item--more .cov__ico { background: rgba(255, 255, 255, .22); color: #fff; }
+@media (max-width: 759px) {
+  .cov__item { flex-direction: column; text-align: center; gap: 8px; padding: 16px 10px; font-size: .9rem; }
+  .cov__item--more { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 12px; }
+}
+.cover-note { margin-top: 16px; color: var(--muted); font-size: .85rem; }
+.cover__band { margin-top: 26px; }
+
+
+/* ---------- EXTRAS: faixa discreta no hero, embaixo do cartão branco (não compete com a oferta) ---------- */
+.extras { margin-top: 14px; }
+.extras__title { font-family: var(--f-head); font-weight: 700; font-size: .84rem; letter-spacing: .01em; color: var(--muted); margin-bottom: 8px; }
+.extras__grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.extra { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 58px; padding: 8px 6px; border-radius: 13px; border: 1px solid var(--line); background: rgba(255, 255, 255, .025); text-align: center; }
+.extra__ico { display: grid; place-items: center; width: 22px; height: 22px; color: rgba(255, 92, 92, .7); }
+.extra__ico svg { width: 20px; height: 20px; }
+.extra__logo { display: block; height: 22px; width: auto; max-width: 100%; opacity: .55; }
+.extra__label { font-weight: 600; font-size: .75rem; line-height: 1.15; color: var(--muted); }
+.extras__note { margin-top: 7px; font-size: .75rem; line-height: 1.3; color: var(--dim); }
+@media (min-width: 1200px) {
+  .extra { flex-direction: row; gap: 9px; min-height: 42px; padding: 6px 10px; justify-content: flex-start; text-align: left; }
+  .extra__label { font-size: .78rem; }
+}
+@media (max-width: 560px) { .extra { padding: 8px 3px; } .extras__grid { gap: 6px; } }
+@media (min-width: 980px) and (max-height: 720px) { .extras__note { display: none; } }
+
+/* ---------- OFERTA ANIMADA: "Outubro" é riscado, "Novembro" entra e fica fixo ---------- */
+/* Estado padrão (sem JS / movimento reduzido / falha) = texto FINAL: "Pague o Primeiro Boleto Somente em Novembro!" */
+.ofr__l1, .ofr__l2 { display: block; }
+.ofr__old { display: none; }
+.ofr__strike { display: none; }
+.ofr__new { color: var(--red-hot); }
+/* com JS: começa em "Outubro" e a animação leva ao estado final */
+.js .ofr__some { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; white-space: nowrap; vertical-align: top; }
+.js .ofr__month { position: relative; display: inline-block; vertical-align: top; overflow: hidden; padding-bottom: .16em; margin-bottom: -.16em; }
+.js .ofr__old { display: inline-block; position: relative; white-space: nowrap; }
+.js .ofr__strike { display: block; position: absolute; left: -3%; right: -3%; top: 55%; height: 3px; border-radius: 2px; background: var(--red-hot); box-shadow: 0 0 12px rgba(255, 58, 63, .8); transform: scaleX(0); transform-origin: 0 50%; }
+.js .ofr__new { position: absolute; left: 0; top: 0; white-space: nowrap; opacity: 0; transform: translateY(100%); }
+/* estado final fixo (a animação termina aqui) */
+.js .ofr.is-done .ofr__some { display: inline; max-width: none; opacity: 1; overflow: visible; }
+.js .ofr.is-done .ofr__month { position: static; display: inline; overflow: visible; padding: 0; margin: 0; width: auto; }
+.js .ofr.is-done .ofr__old { display: none; }
+.js .ofr.is-done .ofr__new { position: static; opacity: 1; transform: none; }
+/* rede de segurança: se o JS de animação travar, aos 7s a oferta vai sozinha para o texto final (nunca fica em "Outubro") */
+.js .ofr:not(.is-done) .ofr__old { animation: ofrOld 0s 7s forwards; }
+.js .ofr:not(.is-done) .ofr__new { animation: ofrNew 0s 7s forwards; }
+.js .ofr:not(.is-done) .ofr__some { animation: ofrSome 0s 7s forwards; }
+@keyframes ofrOld { to { opacity: 0; position: absolute; visibility: hidden; } }
+@keyframes ofrNew { to { opacity: 1; transform: none; position: static; } }
+@keyframes ofrSome { to { max-width: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .js .ofr__some { display: inline; max-width: none; opacity: 1; overflow: visible; }
+  .js .ofr__month { position: static; display: inline; overflow: visible; padding: 0; margin: 0; }
+  .js .ofr__old { display: none; }
+  .js .ofr__new { position: static; opacity: 1; transform: none; }
+}
+
+
+/* ==========================================================================
+   FORMULÁRIO NA PRIMEIRA TELA (desktop): o formulário INTEIRO (campos, botão, aviso) cabe na altura da janela,
+   sem rolar. Quanto mais baixa a tela (notebook, zoom alto), mais compacto ele fica.
+   ========================================================================== */
+@media (min-width: 980px) {
+  .hero { padding-top: calc(var(--nav-h) + 20px); padding-bottom: clamp(36px, 5vw, 64px); }
+}
+@media (min-width: 980px) {
+  .hero { padding-top: calc(var(--nav-h) + 14px); }
+  .formscene .form { padding: 24px 30px 20px; }
+  .aform__title { margin-bottom: 14px; font-size: 1.65rem; }
+  .aform__sub { display: none; }
+  .field label { margin-bottom: 5px; }
+  .field + .field { margin-top: 12px; }
+  .field input { height: 52px; }
+  .plate__top { height: 24px; }
+  .plate input { height: 64px; font-size: 2.9rem; }
+  .form__nav { margin-top: 16px; }
+  .aform .btn--primary { --h: 56px; }
+  .form__ticks { margin-top: 12px; }
+  .form__legal { margin-top: 10px; font-size: .72rem; line-height: 1.4; }
+  .aform__wa { min-height: 32px; margin-top: 6px; padding: 4px 0; }
+}
+@media (min-width: 980px) {
+  .formscene .form { padding: 20px 28px 16px; }
+  .aform__title { margin-bottom: 10px; font-size: 1.45rem; }
+  .field + .field { margin-top: 9px; }
+  .field input { height: 48px; }
+  .plate input { height: 56px; font-size: 2.5rem; }
+  .form__nav { margin-top: 12px; }
+  .aform .btn--primary { --h: 52px; }
+  .form__ticks { margin-top: 9px; font-size: .74rem; }
+  .form__legal { margin-top: 8px; font-size: .68rem; }
+  .aform__wa { display: none; }
+}
+@media (min-width: 980px) and (max-height: 640px) {
+  .formscene .form { padding: 16px 24px 14px; }
+  .aform__title { margin-bottom: 8px; font-size: 1.3rem; padding-right: 96px; }
+  .field label { margin-bottom: 3px; font-size: .76rem; }
+  .field + .field { margin-top: 7px; }
+  .field input { height: 42px; border-radius: 12px; font-size: 1rem; }
+  .plate { border-width: 2px; }
+  .plate__top { height: 18px; font-size: .58rem; }
+  .plate input { height: 46px; font-size: 2rem; }
+  .form__nav { margin-top: 10px; }
+  .aform .btn--primary { --h: 48px; font-size: 1rem; }
+  .form__ticks { display: none; }
+  .form__legal { margin-top: 8px; font-size: .64rem; line-height: 1.3; }
+}
+
+
+/* ---------- LOGO OFICIAL (Club Unimotos Car) ---------- */
+.wordmark--logo { gap: 0; }
+.brand-logo { display: block; height: 46px; width: auto; max-width: none; }
+.footer .brand-logo { height: 56px; }
+.choose .brand-logo { height: 60px; }
+@media (max-width: 560px) { .nav .brand-logo { height: 40px; } .footer .brand-logo { height: 50px; } }
+
+/* selo de preço em celulares estreitos */
+@media (max-width: 380px) { .price { right: 6px; --py: 7px; --pl: 10px; --pr: 10px; } .price b { font-size: 1.6rem; } .price strong span { margin-right: 4px; } }
+@media (max-width: 380px) { .aform__title { font-size: 1.3rem; } }

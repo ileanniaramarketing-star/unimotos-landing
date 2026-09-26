@@ -1,27 +1,85 @@
 {
-  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. Preencha os campos null com o que está na documentação do painel: Minha empresa > Integrações > Power API. Cada veículo (moto/carro) pode ter etapa de funil e vendedores próprios em 'products'; o que ficar null herda o bloco global.",
-  "baseUrl": null,
-  "auth": { "header": null, "scheme": null },
-  "endpoints": { "createQuotation": null },
-  "origin": "Landing Page",
-  "funnelStageId": null,
+  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. API: POST /api/quotation/add (validado em 25/09/2026 com uma cotação de teste). A cotação entra na coluna 'Cotação Recebida' do funil, atribuída ao consultor cujo PowerLink está em sellers[].code. Falta: PowerLink do Vitor e da Kathleen.",
+  "baseUrl": "https://api.powercrm.com.br",
+  "auth": {
+    "header": "Authorization",
+    "scheme": "Bearer"
+  },
+  "endpoints": {
+    "createQuotation": "api/quotation/add"
+  },
   "sellers": [
-    { "name": "Vitor", "code": null, "active": true },
-    { "name": "Kathleen", "code": null, "active": true }
+    {
+      "name": "Vitor",
+      "code": null,
+      "active": true
+    },
+    {
+      "name": "Kathleen",
+      "code": null,
+      "active": true
+    },
+    {
+      "name": "Ilean (teste)",
+      "code": "vrXbVKeq",
+      "active": false
+    }
   ],
   "products": {
-    "moto": { "funnelStageId": null, "sellers": null },
-    "carro": { "funnelStageId": null, "sellers": null }
+    "moto": {
+      "sellers": null,
+      "coop": null,
+      "cityId": null
+    },
+    "carro": {
+      "sellers": null,
+      "coop": null,
+      "cityId": null
+    }
   },
-  "fieldMap": {
-    "nome": null,
-    "telefone": null,
-    "placa": null,
-    "veiculo": null,
-    "origem": null,
-    "subOrigem": null,
-    "etapa": null,
-    "vendedor": null,
-    "observacao": null
+  "_api": {
+    "cadastro": "POST /api/quotation/add (JSON). Campos: name, phone, email, plts (placa), city (id), mdl (id do modelo), mdlYr (id do ano), workVehicle, slsmnId, slsmnNwId, pwrlnk, affiliateId, origemId, leadSource, chassi, registration, discount, coop",
+    "autenticacao": "Authorization: Bearer <token> (testado: HTTP 200 em /api/quotation/origins)",
+    "origens": {
+      "SITE": 2424,
+      "REDES SOCIAIS": 625,
+      "GOOGLE": 624,
+      "WHATSAPP CONSULTOR": 19597,
+      "TRAFEGO CLIMBER": 24553,
+      "TRAFEGO GABRIEL": 24554,
+      "Formulario CRM Boost": 18818
+    },
+    "tiposDeVeiculo": {
+      "1": "Carro ou utilitário pequeno",
+      "2": "Moto",
+      "3": "Caminhão ou micro-ônibus"
+    },
+    "cidadesMG": {
+      "Contagem": 1770,
+      "Belo Horizonte": 1630,
+      "Betim": 1636,
+      "Ribeirão das Neves": 2201
+    },
+    "consultores": "POST /api/consultant/powerlink {email|phone} devolve { powerlinkId, name, email, phone, powerlinks:[{name,link}], powerlinkAffiliate }. O 'powerlinkId' (ex.: vrXbVKeq) é o código do consultor: vai no campo pwrlnk (e como 'id=' nos links, ex.: https://unimotoscarbrasil.com.br/?id=vrXbVKeq). Ilean (teste) já resolvida; faltam Vitor e Kathleen (e-mail ou WhatsApp cadastrados no Power CRM).",
+    "placa": "GET /api/quotation/plates/{plate} devolve os dados do veículo (pode preencher mdl/mdlYr sem o cliente escolher)",
+    "mover": "POST /api/quotation/card/move?cardColumn=&quotationCode= move o card de coluna do funil",
+    "naoUsar": "/api/powerbi/* devolve dados de MUITAS empresas com este token; não consultar",
+    "camposPersonalizados": "POST /api/quotation/add NÃO aceita campos personalizados (só os fixos). Alternativa: POST /rdstation/add/{codeCompany} (formato de webhook do RD Station): leads[].custom_fields com rótulos fixos Placa, Modelo, Ano Modelo, Ano Fabricação, Origem, Observações, Tag + conversion_origin (campaign, channel, medium, source). Não há endpoint para listar campos personalizados criados no Power CRM. codeCompany = código da empresa (vem da URL de webhook na tela Integrações > RD Station do Power CRM; tratar como segredo).",
+    "validado": {
+      "cotacaoTeste": "HTTP 200. Campos aceitos sem modelo/ano: name, phone, email, plts, city, origemId, slsmnNwId, workVehicle",
+      "resultado": "negociação na coluna 'Cotação Recebida'; leadSource=SITE; origin='Cotação de Hotlink'; coopName='CLUB-UNIMOTOS.CAR' (id 733); responsible=consultora do PowerLink",
+      "utm": "a negociação tem utmSource/utmMedium/utmCampaign/utmId/utmTerm/utmContent, mas o cadastro (add) NÃO tem esses campos; a definir (tags/atividade/nota)",
+      "pendente": "FEITO: e-mail NÃO é obrigatório (teste 2 igual ao formulário da LP: name, phone, plts, city, origemId, slsmnNwId, workVehicle -> HTTP 200). O mesmo telefone em 2 envios criou 2 negociações separadas (o CRM não junta por telefone). Falta: UTM/tags/nota, PowerLink do Vitor/Kathleen, cooperativa das motos.",
+      "testesCriados": "cotação DmKbYkxE / negociação 7Ep0jWx1EM e cotação qyN2zWJD / negociação 3EXavjj1oz (nomes 'TESTE LP ... pode apagar') — apagar/arquivar no Power CRM"
+    }
+  },
+  "defaults": {
+    "cityId": 1770,
+    "coop": null
+  },
+  "origins": {
+    "default": 2424,
+    "social": 625,
+    "google": 624
   }
 }

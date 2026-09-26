@@ -23,7 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
 
   <script>document.documentElement.className = 'js';</script>
-  <link rel="stylesheet" href="/css/style.css?v=ac1d6c1b">
+  <link rel="stylesheet" href="/css/style.css?v=db61c586">
 </head>
 
 <body data-vehicle="carro">
@@ -34,20 +34,15 @@
   <!-- ============================== NAV ============================== -->
   <header class="nav" id="nav">
     <div class="nav__inner container">
-      <a class="wordmark" href="#top" aria-label="Unimotos — início">
-        <span class="wordmark__slash"><i></i><i></i></span>
-        <span class="wordmark__text">UNI<b>MOTOS</b></span>
+      <a class="wordmark wordmark--logo" href="#top" aria-label="Unimotos — início">
+        <img class="brand-logo" src="/assets/brand/logo-dark.png?v=bdf3dc6e" alt="Club Unimotos Car — Proteção para vida e patrimônio" width="252" height="72" decoding="async">
       </a>
       <nav class="nav__links" aria-label="Seções">
-        <a href="#porque">Coberturas</a>
-        <a href="#cotacao">Cotação</a>
+        <a href="#beneficios">Benefícios</a>
+        <a href="#coberturas">Coberturas</a>
         <a href="#como">Como funciona</a>
         <a href="#faq">Dúvidas</a>
       </nav>
-      <a class="btn btn--primary btn--sm" data-cta="nav" data-magnetic href="#cotacao">
-        <span>Fazer cotação</span>
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-arrow-right"/></svg>
-      </a>
     </div>
   </header>
 
@@ -65,7 +60,7 @@
             <span class="line"><span>levou tempo</span></span>
             <span class="line"><span class="hl">para construir!</span></span>
           </h1>
-          <p class="hero__sub" data-hero="sub">Cote pela placa e receba no WhatsApp o valor da proteção do seu carro.</p>
+          <p class="hero__sub ofr" id="offer" data-hero="sub"><span class="ofr__l1">Pague o Primeiro Boleto</span><span class="ofr__l2"><span class="ofr__some">Somente&nbsp;</span>em <span class="ofr__month"><span class="ofr__old" aria-hidden="true">Outubro<i class="ofr__strike"></i></span><span class="ofr__new">Novembro</span></span>!</span></p>
         </div>
 
         <div class="hero__formwrap formscene" id="cotacao" data-hero="form">
@@ -75,8 +70,9 @@
             <path class="sh-c" pathLength="1" d="M92 172 L134 214 L212 130"/>
           </svg>
           <div class="price" id="heroPrice" hidden>
-            <small>a partir de</small>
-            <strong><span>R$</span><b id="priceValue">56</b><em>/mês</em></strong>
+            <small>Proteção a partir de</small>
+            <strong><span>R$</span><b id="priceValue">55,36</b><em>/mês</em></strong>
+            <span class="price__day" id="priceDay">Menos de R$&nbsp;2,00 por dia</span>
           </div>
 
           <form class="form aform" id="quoteForm" novalidate>
@@ -116,7 +112,6 @@
               <ul class="form__ticks">
               <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-check"/></svg> Sem compromisso</li>
               <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-check"/></svg> Retorno pelo WhatsApp</li>
-              <li><svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-check"/></svg> Sem análise de perfil</li>
               </ul>
               <p class="form__legal">Ao enviar, você concorda que a Unimotos use seu nome, telefone e a placa para fazer a cotação e falar com você pelo WhatsApp.</p>
               <a class="aform__wa" data-wa data-cta="hero-wa" href="#cotacao">Prefere ir direto? <span>Chame no WhatsApp <svg class="ico" viewBox="0 0 24 24" width="24" height="24"><use href="#i-arrow-right"/></svg></span></a>
@@ -141,6 +136,16 @@
             <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-truck"/></svg></span><span>Guincho todo <br>o Brasil</span></li>
             <li class="perk"><span class="perk__ico"><svg viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-tools"/></svg></span><span>Assistência <br>24h</span></li>
           </ul>
+          <div class="extras" id="extras" role="region" aria-label="Benefícios do clube">
+            <p class="extras__title">Benefícios sem pagar nada!</p>
+            <ul class="extras__grid">
+              <li class="extra extra--logo"><span class="extra__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-heart"/></svg></span><img class="extra__logo" src="/assets/partners/grupo-zelo.svg?v=d42ba0e6" alt="Grupo Zelo" width="94" height="49" decoding="async"></li>
+              <li class="extra"><span class="extra__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-telemed"/></svg></span><span class="extra__label">Telemedicina</span></li>
+              <li class="extra"><span class="extra__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-paw"/></svg></span><span class="extra__label">Auxílio Pet</span></li>
+              <li class="extra"><span class="extra__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-gift"/></svg></span><span class="extra__label">E muito mais</span></li>
+            </ul>
+            <p class="extras__note">Benefícios do clube, conforme as condições da associação.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -158,46 +163,74 @@
     </div>
 
 <!-- ============================== COBERTURAS ============================== -->
-    <section class="section why" id="porque">
+    <section class="section" id="beneficios">
       <div class="container">
         <header class="section__head">
-          <p class="eyebrow" data-reveal>Por que a Unimotos</p>
-          <h2 class="h2" data-split>Proteção de verdade pra você rodar <span class="hl">sem medo.</span></h2>
+          <p class="eyebrow" data-reveal>Benefícios</p>
+          <h2 class="h2" data-split>Benefícios que <span class="hl">acompanham você.</span></h2>
         </header>
-
-        <div class="bento">
-          <article class="card card--tall" data-reveal data-tilt>
-            <div class="card__big" aria-hidden="true">24H</div>
-            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24"><use href="#i-tools"/></svg></div>
+        <div class="bnf-grid">
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-tools"/></svg></div>
             <h3>Assistência 24 horas</h3>
-            <p>Chaveiro, troca de pneus, retorno ao domicílio, auxílio pane seca e atendimento 0800 24 horas, conforme o plano.</p>
-            <a class="link" data-cta="card-assistencia" href="#cotacao">Fazer minha cotação <svg class="ico" viewBox="0 0 24 24" width="24" height="24"><use href="#i-arrow-right"/></svg></a>
           </article>
-
-          <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24"><use href="#i-mask"/></svg></div>
-            <h3>Roubo e furto</h3>
-            <p>Cobertura para furto e roubo, além de colisão, incêndio, fenômenos naturais e perda total. Consulte condições.</p>
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-truck"/></svg></div>
+            <h3>Guincho em todo o Brasil</h3>
           </article>
-
-          <article class="card" data-reveal data-tilt>
-            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24"><use href="#i-truck"/></svg></div>
-            <h3>Guincho todo o Brasil</h3>
-            <p>Guincho em todo o Brasil e, conforme o plano, carro reserva e KM livre em colisões. Consulte as condições.</p>
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-mask"/></svg></div>
+            <h3>Proteção contra roubo e furto</h3>
           </article>
-
-          <article class="card card--wide" data-reveal data-tilt>
-            <div class="card__wide-copy">
-              <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24"><use href="#i-shield"/></svg></div>
-              <h3>Pagamos 100% da FIPE</h3>
-              <p>Pagamos 100% do valor da tabela FIPE, conforme as condições da proteção. Sem análise de perfil. Consulte o regulamento.</p>
-            </div>
-            <a class="btn btn--primary" data-cta="card-fipe" data-magnetic href="#cotacao">
-              <span>Fazer minha cotação</span>
-              <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-arrow-right"/></svg>
-            </a>
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-key"/></svg></div>
+            <h3>Carro reserva (conforme o plano)</h3>
+          </article>
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-garage"/></svg></div>
+            <h3>Oficinas credenciadas</h3>
+          </article>
+          <article class="card bnf" data-reveal data-tilt>
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-headset"/></svg></div>
+            <h3>Atendimento personalizado</h3>
           </article>
         </div>
+      </div>
+    </section>
+
+    <!-- ============================== COBERTURAS (lista) ============================== -->
+    <section class="section cover" id="coberturas">
+      <div class="container">
+        <header class="section__head">
+          <p class="eyebrow" data-reveal>Coberturas</p>
+          <h2 class="h2" data-split>O que a sua proteção <span class="hl">cobre.</span></h2>
+        </header>
+        <div class="cov" data-reveal>
+          <ul class="cov__grid">
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-crash"/></svg></span><span>Colisão</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-flame"/></svg></span><span>Incêndio</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-mask"/></svg></span><span>Roubo e furto</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-cloud-bolt"/></svg></span><span>Fenômenos da natureza</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-bulb"/></svg></span><span>Vidros, faróis e lanternas</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-users"/></svg></span><span>Danos a terceiros</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-house"/></svg></span><span>Assistência residencial</span></li>
+            <li class="cov__item"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-user"/></svg></span><span>Assistência a passageiros</span></li>
+            <li class="cov__item cov__item--more"><span class="cov__ico"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-plus"/></svg></span><span>E muito mais!</span></li>
+          </ul>
+        </div>
+        <p class="cover-note" data-reveal>Coberturas e limites seguem o regulamento da associação. Consulte as condições para o seu caso.</p>
+
+        <article class="card card--wide cover__band" data-reveal data-tilt>
+          <div class="card__wide-copy">
+            <div class="card__icon"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-shield"/></svg></div>
+            <h3>Pagamos 100% da FIPE</h3>
+            <p>Pagamos 100% do valor da tabela FIPE, conforme as condições da proteção. Sem análise de perfil. Consulte o regulamento.</p>
+          </div>
+          <a class="btn btn--primary" data-cta="cobertura-fipe" data-magnetic href="#cotacao">
+            <span>Fazer minha cotação</span>
+            <svg class="ico" viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><use href="#i-arrow-right"/></svg>
+          </a>
+        </article>
       </div>
     </section>
 
@@ -372,7 +405,7 @@
           </div>
           <div class="acc__item" data-reveal>
             <button class="acc__q" type="button" aria-expanded="false"><span>O que a proteção cobre?</span><i></i></button>
-            <div class="acc__a"><div><p>Furto e roubo, colisão, incêndio, danos por fenômenos naturais e perda total, com assistência 24 horas. Carro reserva e KM livre em colisões, conforme o plano. Coberturas e limites seguem o regulamento: consulte as condições.</p></div></div>
+            <div class="acc__a"><div><p>Colisão, incêndio, roubo e furto, fenômenos da natureza, vidros, faróis e lanternas, danos a terceiros, assistência residencial e a passageiros, entre outras coberturas, com assistência 24 horas. Carro reserva, conforme o plano. Coberturas e limites seguem o regulamento: consulte as condições.</p></div></div>
           </div>
           <div class="acc__item" data-reveal>
             <button class="acc__q" type="button" aria-expanded="false"><span>Quanto custa proteger o meu carro?</span><i></i></button>
@@ -414,16 +447,16 @@
         <p class="final__hours" id="finalHours" data-reveal></p>
       </div>
     </section>
+
   </main>
 
   <!-- ============================== FOOTER ============================== -->
   <footer class="footer">
     <div class="container footer__inner">
       <div class="footer__brand">
-        <a class="wordmark" href="#top" aria-label="Unimotos — topo">
-          <span class="wordmark__slash"><i></i><i></i></span>
-          <span class="wordmark__text">UNI<b>MOTOS</b></span>
-        </a>
+        <a class="wordmark wordmark--logo" href="#top" aria-label="Unimotos — topo">
+        <img class="brand-logo" src="/assets/brand/logo-dark.png?v=bdf3dc6e" alt="Club Unimotos Car — Proteção para vida e patrimônio" width="252" height="72" decoding="async">
+      </a>
         <p>Proteção veicular para carros.<br>Cotação pela placa.</p>
       </div>
       <div class="footer__col">
@@ -480,6 +513,24 @@
       <symbol id="i-truck" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 16.5v-5h10.5v5"/><path d="M13 16.5V10h3.7l3.3 3.6v2.9"/><circle cx="6.3" cy="17.6" r="1.8"/><circle cx="16.7" cy="17.6" r="1.8"/><path d="M8.1 17.6h6.8"/><path d="M4.4 11.5l1.2-2.6h4.6l1.2 2.6"/></g></symbol>
       <symbol id="i-tools" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 4.6a3.9 3.9 0 0 0-4.9 5L4 15.3a1.9 1.9 0 0 0 2.7 2.7l5.7-5.7a3.9 3.9 0 0 0 5-4.9l-2.3 2.3-2-.6-.6-2z"/><path d="M14.5 14.5l4.7 4.7M17.5 19.9l2.4-2.4"/></g></symbol>
 
+      
+      <symbol id="i-flame" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c.9 3.4 4.5 5 4.5 9a4.5 4.5 0 0 1-9 0c0-1.9.9-3 2-4 .3 1.2 1 1.8 1.8 2C11.2 8.2 11 5.6 12 3z"/></g></symbol>
+      <symbol id="i-crash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18.5 6l-1.6 4.7L21 12l-4.1 1.3 1.6 4.7-4.7-1.6L12 21l-1.8-4.6L5.5 18l1.6-4.7L3 12l4.1-1.3L5.5 6l4.7 1.6z"/></g></symbol>
+      <symbol id="i-cloud-bolt" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.5a4 4 0 0 1-.6-7.9 5.2 5.2 0 0 1 9.9-.9A4.5 4.5 0 0 1 17 16.5"/><path d="M12.6 11.5l-2.2 3.4h3l-2.2 3.6"/></g></symbol>
+      <symbol id="i-bulb" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18.5h5M10.5 21h3M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.2 1.1 2.2h5c0-1 .5-1.7 1.1-2.2A6 6 0 0 0 12 3z"/></g></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 19.5a6 6 0 0 1 12 0M16 5.2a3 3 0 0 1 0 5.6M17.5 14.4a5.5 5.5 0 0 1 3.5 5.1"/></g></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></g></symbol>
+      <symbol id="i-house" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.2L12 4l9 7.2M5.5 10v9.5h13V10M10 19.5v-5h4v5"/></g></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+      <symbol id="i-garage" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5v-10L12 4.5l8.5 6v10M7 20.5v-6.5h10v6.5M7 16.2h10M7 18.4h10"/></g></symbol>
+      <symbol id="i-headset" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h2.6v5H5a1 1 0 0 1-1-1v-3zM20 14h-2.6v5H19a1 1 0 0 0 1-1v-3z"/><path d="M17.4 19c0 1.6-2 2.6-5 2.6"/></g></symbol>
+
+      
+      <symbol id="i-telemed" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12.5" rx="2"/><path d="M9 20.5h6M12 16.5v4"/><circle cx="12" cy="8.8" r="1.9"/><path d="M8.6 14c.5-1.6 1.7-2.4 3.4-2.4s2.9.8 3.4 2.4"/></g></symbol>
+      <symbol id="i-paw" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="6.2" cy="10.4" rx="1.9" ry="2.5"/><ellipse cx="10.2" cy="6.2" rx="1.9" ry="2.6"/><ellipse cx="14.2" cy="6.2" rx="1.9" ry="2.6"/><ellipse cx="18.1" cy="10.4" rx="1.9" ry="2.5"/><path d="M12.2 12c-2.6 0-5 2.6-5 5a2.6 2.6 0 0 0 3 2.5c.8-.2 1.3-.4 2-.4s1.2.2 2 .4a2.6 2.6 0 0 0 3-2.5c0-2.4-2.4-5-5-5z"/></g></symbol>
+      <symbol id="i-gift" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="8.5" width="17" height="4" rx="1"/><path d="M5 12.5V20h14v-7.5M12 8.5V20"/><path d="M12 8.5C10 8.5 7.6 7.6 7.6 5.9a1.9 1.9 0 0 1 3.3-1.2c.7.8 1.1 2.1 1.1 3.8zM12 8.5c2 0 4.4-.9 4.4-2.6a1.9 1.9 0 0 0-3.3-1.2c-.7.8-1.1 2.1-1.1 3.8z"/></g></symbol>
+      <symbol id="i-heart" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3C5.4 15.6 3 12 3 8.7A4.7 4.7 0 0 1 7.7 4c1.8 0 3.2.9 4.3 2.4C13.1 4.9 14.5 4 16.3 4A4.7 4.7 0 0 1 21 8.7c0 3.3-2.4 6.9-9 11.6z"/></g></symbol>
+
       <!-- glifos das categorias (120x120) -->
       <symbol id="g-urban" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="30" cy="84" r="16"/><circle cx="92" cy="84" r="16"/><path d="M30 84h20l12-30h14l10 30M62 54l-6-14h-14M48 84l8-22h22"/><path d="M22 60h22v14H22z"/></g></symbol>
       <symbol id="g-street" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="26" cy="82" r="17"/><circle cx="96" cy="82" r="17"/><path d="M26 82l20-28h26l8 10 14 18M46 54l-8-12h-14M72 54l4-14 14-4M50 82h26"/><path d="M52 58h18l4 10H52z"/></g></symbol>
@@ -499,7 +550,7 @@
   <script src="/assets/vendor/gsap.min.js?v=2d26f4c0" defer></script>
   <script src="/assets/vendor/ScrollTrigger.min.js?v=489bcf6d" defer></script>
   <script src="/assets/vendor/lenis.min.js?v=44dcd10f" defer></script>
-  <script src="/js/config.js?v=0fa276b1" defer></script>
-  <script src="/js/main.js?v=2ce8fc6e" defer></script>
+  <script src="/js/config.js?v=7ebe83ff" defer></script>
+  <script src="/js/main.js?v=7461a000" defer></script>
 </body>
 </html>

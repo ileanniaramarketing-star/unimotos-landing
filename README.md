@@ -57,7 +57,7 @@ carros/index.html   LP de carros
 css/style.css       visual, layout, animações
 js/config.js        ⭐ dados do cliente (PÚBLICO: nunca coloque token aqui)
 js/main.js          animações, formulário de cotação, eventos de conversão
-assets/             favicon, imagens de compartilhamento (og*.jpg), vendor/ (GSAP + Lenis)
+assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo), partners/ (Grupo Zelo), vendor/ (GSAP + Lenis)
 config/powercrm.json  configuração NÃO secreta do CRM
 scripts/            serve.js (servidor + /api/lead), build.js, vault.ps1, lib/ (lead, powercrm)
 ```
@@ -69,9 +69,9 @@ scripts/            serve.js (servidor + /api/lead), build.js, vault.ps1, lib/ (
    +4.800 indenizações pagas* (`stats`), endereço, coberturas (roubo e furto, colisão, incêndio, fenômenos naturais, perda total),
    "Pagamos 100% da FIPE" e "Guincho todo o Brasil" (vieram da arte da campanha), "sem análise de perfil", carro reserva e KM livre "conforme o plano". Aviso legal no rodapé:
    associação de proteção veicular, **não é seguro**, Lei Complementar nº 213/2025.
-3. **Selo de preço**: `price` em `js/config.js` (`carro: "56"` vem da arte; `moto` está vazio, sem selo). Com valor, aparece "a partir de R$ X/mês" no hero e a observação "sujeito ao modelo, ano e valor FIPE" no rodapé.
+3. **Selo de preço**: `price` em `js/config.js` (`carro: "55,36"`, com vírgula; `moto` está vazio, sem selo). Com valor, o hero mostra "Proteção a partir de / R$ 55,36/mês / Menos de R$ 2,00 por dia" (esta última linha fica numa faixa branca com texto preto; o "por dia" é calculado: valor ÷ 30, arredondado para cima) e o rodapé traz "sujeito ao modelo, ano e valor FIPE".
 4. **Foto do veículo**: a arte usa foto do carro sobre piso vermelho. O hero ainda não tem foto (o formulário ocupa o lugar do antigo velocímetro); quando houver as fotos em PNG com fundo transparente, elas entram no hero/seções.
-5. **Logo**: hoje é um wordmark em HTML/CSS (`.wordmark`). Trocar pelo logo oficial quando houver arquivo.
+5. **Logo**: já é o oficial (Club Unimotos Car), em `assets/brand/`: `logo-original.png` (intacto, feito para fundo claro) e `logo-dark.png` (versão para o nosso fundo preto: vermelho original mantido, cinza-escuro trocado por branco). Ideal pedir ao cliente o logo em SVG (ou PNG maior) e uma versão oficial para fundo escuro: o PNG de 252×72 fica levemente suave em telas retina. As imagens de compartilhamento (`og*.jpg`) ainda usam o logotipo em texto.
 6. **Rastreamento** (`gtmId`, `metaPixelId`, `ga4Id`): preencher só o que for usar. Eventos: `whatsapp_click` (Meta: Contact) e `generate_lead` (Meta: Lead), com `veiculo`.
    Nome, telefone e placa **não** vão ao Pixel/GA.
 7. **Prévia de link** (`og:image`): use a URL absoluta do domínio (ex.: `https://seudominio.com.br/assets/og-motos.jpg`).

@@ -14,7 +14,7 @@ const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const PAGES = ['index.html', 'motos/index.html', 'carros/index.html'];
-const REF = /((?:href|src)=")(\/(?:css|js|assets\/vendor)\/[^"?#]+)(?:\?v=[0-9a-f]+)?(")/g;
+const REF = /((?:href|src)=")(\/(?:css|js|assets\/(?:vendor|brand|partners))\/[^"?#]+)(?:\?v=[0-9a-f]+)?(")/g;
 
 // hash independe de CRLF/LF (Windows x Linux geram o mesmo valor)
 function hashOf(root, rel) {
