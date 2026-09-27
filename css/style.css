@@ -744,3 +744,8 @@ body::after {
 /* selo de preço em celulares estreitos */
 @media (max-width: 380px) { .price { right: 6px; --py: 7px; --pl: 10px; --pr: 10px; } .price b { font-size: 1.6rem; } .price strong span { margin-right: 4px; } }
 @media (max-width: 380px) { .aform__title { font-size: 1.3rem; } }
+
+/* celular: respiro entre a oferta ("Somente em Novembro!") e o cartão de preço, que sobe 30px sobre o formulário */
+@media (max-width: 560px) { .hero__formwrap { margin-top: 24px; } }
+/* celulares muito estreitos: título e preço um pouco menores para o cartão não encostar no "Cote seu carro" */
+@media (max-width: 350px) { .aform__title { font-size: 1.02rem; } .price b { font-size: 1.45rem; } }
