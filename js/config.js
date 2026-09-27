@@ -56,7 +56,7 @@ window.UNI_CONFIG = {
   // Valor mensal em formato brasileiro (vírgula), ex.: "55,36". O selo mostra "Proteção a partir de / R$ X/mês /
   // Menos de R$ N,00 por dia" (o "por dia" é calculado: valor ÷ 30). Moto: preencher quando houver o valor.
   // Vazio = o selo não aparece. Mostra também a observação de rodapé "sujeito ao modelo, ano e FIPE".
-  price: { moto: "", carro: "55,36" },
+  price: { moto: "60", carro: "55,36" },
 
   /* --- Números institucionais (seção "stats") ---------------------------- */
   // ⚠️ Retirados do site institucional da associação: CONFIRMAR com o cliente antes de publicar.

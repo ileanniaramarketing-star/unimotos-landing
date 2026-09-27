@@ -181,7 +181,7 @@ body::after {
 .hero__arcs i:nth-child(3) { width: min(40vw, 580px); right: 6vw; bottom: -14vw; border: 2px solid rgba(255, 74, 74, .22); }
 .hero__vignette { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(5, 5, 5, .55), transparent 24%, transparent 74%, var(--bg) 100%); }
 
-.hero__inner { position: relative; z-index: 2; display: grid; gap: 26px; grid-template-areas: "copy" "form" "perks"; }
+.hero__inner { position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px; grid-template-areas: "copy" "form" "perks"; }
 .hero__copy { grid-area: copy; }
 .hero__formwrap { grid-area: form; }
 .perks-wrap { grid-area: perks; }
@@ -605,6 +605,14 @@ body::after {
   .stat { padding: 20px; }
   .final { padding: 72px 0 84px; }
   .btn--xl { --h: 60px; font-size: 1.05rem; }
+
+  /* leitura melhor no celular: título do hero e títulos de seção centralizados.
+     Formulário, FAQ, passos ("Como funciona") e cards de benefício continuam à esquerda
+     (são texto para ler em sequência, não frase de efeito). */
+  .hero__copy { text-align: center; }
+  .section__head { text-align: center; }
+  .styles__head { flex-direction: column; align-items: center; text-align: center; }
+  .styles__hint { max-width: none; }
 }
 @media (max-width: 360px) {
   .hero__title { font-size: 2.05rem; }
