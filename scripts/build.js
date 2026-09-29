@@ -5,7 +5,7 @@ const path = require('path');
 
 const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'dist');
-const PUBLIC = ['index.html', 'motos', 'carros', 'css', 'js', 'assets'];
+const PUBLIC = ['index.html', 'motos', 'carros', 'css', 'js', 'assets', 'painel'];
 
 function build() {
   require('./version-assets').run(); // CSS/JS com ?v=hash: nunca fica "velho" em cache depois de um deploy

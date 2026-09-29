@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Painel Unimotos · Leads</title>
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=44ef2573">
+  <link rel="stylesheet" href="/painel/painel.css?v=fbfa2f7b">
+</head>
+<body class="painel-shell">
+  <header class="painel-top">
+    <div class="painel-top__brand">
+      <img src="/assets/brand/logo-dark.png?v=bdf3dc6e" alt="Unimotos" width="126" height="36" decoding="async">
+      <span class="painel-top__title">Painel interno</span>
+    </div>
+    <button class="painel-logout" id="logoutBtn" type="button">Sair</button>
+  </header>
+
+  <nav class="painel-tabs" role="tablist">
+    <button class="painel-tab is-active" id="tabBtnLeads" type="button" role="tab" aria-selected="true">Leads</button>
+    <button class="painel-tab" id="tabBtnRelatorios" type="button" role="tab" aria-selected="false">Relatórios</button>
+  </nav>
+
+  <main class="painel-body">
+    <!-- ============================== LEADS ============================== -->
+    <section class="painel-panel" id="painelLeads">
+      <form class="painel-filters" id="leadsFilters">
+        <div>
+          <label for="fVeiculo">Veículo</label>
+          <select id="fVeiculo" name="veiculo">
+            <option value="">Todos</option>
+            <option value="moto">Moto</option>
+            <option value="carro">Carro</option>
+          </select>
+        </div>
+        <div>
+          <label for="fStatus">Status</label>
+          <select id="fStatus" name="status">
+            <option value="">Todos</option>
+            <option value="sent">Enviado</option>
+            <option value="dry-run">Simulado (dry-run)</option>
+            <option value="retrying">Pendente (retentando)</option>
+            <option value="failed">Falhou</option>
+            <option value="duplicado">Duplicado</option>
+            <option value="not_configured">CRM não configurado</option>
+            <option value="no_token">CRM sem token</option>
+          </select>
+        </div>
+        <div>
+          <label for="fBusca">Nome, telefone ou placa</label>
+          <input id="fBusca" name="q" type="text" placeholder="Buscar…">
+        </div>
+        <div>
+          <label for="fDe">De</label>
+          <input id="fDe" name="from" type="date">
+        </div>
+        <div>
+          <label for="fAte">Até</label>
+          <input id="fAte" name="to" type="date">
+        </div>
+        <div><button type="submit">Filtrar</button></div>
+      </form>
+
+      <p class="painel-count" id="leadsCount"></p>
+      <div class="painel-table-wrap">
+        <table class="painel-table" id="leadsTable">
+          <thead>
+            <tr>
+              <th>Data</th><th>Nome</th><th>Telefone</th><th>Placa</th><th>Veículo</th>
+              <th>Plataforma</th><th>Campanha</th><th>Criativo</th><th>GCLID</th><th>FBCLID</th>
+              <th>Vendedor</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+        <p class="painel-empty" id="leadsEmpty" hidden>Nenhum lead encontrado com esses filtros.</p>
+      </div>
+    </section>
+
+    <!-- ============================== RELATÓRIOS ============================== -->
+    <section class="painel-panel" id="painelRelatorios" hidden>
+      <form class="painel-filters" id="reportFilters">
+        <div>
+          <label for="rDe">De</label>
+          <input id="rDe" name="from" type="date">
+        </div>
+        <div>
+          <label for="rAte">Até</label>
+          <input id="rAte" name="to" type="date">
+        </div>
+        <div><button type="submit">Filtrar</button></div>
+      </form>
+
+      <div class="report-grid">
+        <article class="report-card">
+          <h3>Total de leads</h3>
+          <div class="report-total" id="repTotal">0<small id="repTotalSub"></small></div>
+        </article>
+        <article class="report-card"><h3>Por veículo</h3><div class="report-list" id="repVeiculo"></div></article>
+        <article class="report-card"><h3>Por plataforma</h3><div class="report-list" id="repPlataforma"></div></article>
+        <article class="report-card"><h3>Por campanha</h3><div class="report-list" id="repCampanha"></div></article>
+        <article class="report-card"><h3>Por criativo</h3><div class="report-list" id="repCriativo"></div></article>
+        <article class="report-card"><h3>Por origem (Power CRM)</h3><div class="report-list" id="repOrigem"></div></article>
+        <article class="report-card"><h3>Por vendedor</h3><div class="report-list" id="repVendedor"></div></article>
+        <article class="report-card"><h3>Por status</h3><div class="report-list" id="repStatus"></div></article>
+      </div>
+    </section>
+  </main>
+
+  <script src="/painel/painel.js?v=67a3e148" defer></script>
+</body>
+</html>

@@ -22,9 +22,34 @@ Navegador ──POST /api/lead──▶ servidor do site ──(token + rodízio
 - O formulário só fala com o **próprio site**. O token existe apenas no servidor, como variável de ambiente.
 - O WhatsApp abre em paralelo: se o CRM estiver fora do ar, o lead não se perde para o cliente.
 - O servidor valida tudo de novo (nome, telefone BR, placa), tem isca anti-robô, limite por IP, anti-duplicidade e só aceita requisições da própria origem.
-- **Rodízio** entre Vitor e Kathleen (alternando, por veículo), `config/powercrm.json`.
+- **Rodízio** entre Vitor e Kethlen (alternando, por veículo), `config/powercrm.json`. Quem decide o vendedor da vez é o **próprio site** (antes de mandar ao CRM) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
 - Enquanto `config/powercrm.json` não estiver preenchido, o servidor só registra no log que o lead **não** foi ao CRM (`crm: not_configured` em `/api/health`).
   Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar); só `POWERCRM_LIVE=1` envia de verdade.
+
+## Painel interno (`/painel`): leads e relatórios
+
+Painel de uso da própria equipe (não é público) para acompanhar os leads que chegam pelo site, **sem depender do Power CRM**
+pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a cotação pro CRM.
+
+- **Login estático**: um usuário e uma senha fixos (sem cadastro, sem "esqueci a senha"), guardados no cofre:
+  ```powershell
+  npm run vault -- set PAINEL_USER              # ex.: admin
+  npm run vault -- set PAINEL_PASS              # senha (dá pra gerar uma forte: só digitar algo longo)
+  npm run vault -- set PAINEL_SESSION_SECRET    # uma string aleatória grande (assina a sessão; nunca precisa digitar de novo)
+  ```
+  Sem os três preenchidos, `/painel` responde "não configurado" (503 no login) — o site continua funcionando normalmente.
+- **Sessão**: cookie assinado (HttpOnly, só HTTP — nenhum JS lê), dura 12h. Reiniciar o servidor não desconecta ninguém;
+  trocar `PAINEL_SESSION_SECRET` desconecta todo mundo de uma vez (útil se alguém sair da equipe).
+- **Aba Leads**: nome, telefone, placa, veículo, UTMs (`utm_source/campaign/content`), **GCLID** (clique do Google Ads) e
+  **FBCLID** (clique do Meta Ads), o **vendedor** sorteado no rodízio e o **status** do envio ao Power CRM (enviado, simulado,
+  pendente, falhou, duplicado, CRM não configurado/sem token). Filtros por veículo, status, texto (nome/telefone/placa) e período.
+- **Aba Relatórios**: total de leads, e a mesma contagem quebrada por veículo, plataforma (`utm_source`), campanha, criativo
+  (`utm_content`), origem classificada pro CRM (Site / Google / Redes sociais) e vendedor — com filtro de período.
+- **Onde fica guardado**: `.data/leads.jsonl` (cada lead é uma linha; nunca é servido por HTTP, só lido pelo painel). Não é um
+  banco de dados nem tem interface pra apagar/editar leads — se precisar disso no futuro, dá pra evoluir depois.
+- **Gerenciar vendedores** (adicionar/remover do rodízio) continua sendo em `config/powercrm.json`, não tem tela pra isso ainda.
+- Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
+  cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
 
 ## Cofre de segredos (local)
 
@@ -37,6 +62,8 @@ npm run vault -- remove NOME
 npm run dev                           # sobe http://127.0.0.1:4321 já com o cofre carregado (modo dry-run)
 npm run check:secrets                 # procura os segredos em todos os arquivos e no histórico do Git
 ```
+
+Segredos guardados hoje: `POWERCRM_TOKEN` e os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`).
 
 - Há um **pre-commit** local (`.git/hooks/pre-commit`) que **bloqueia o commit** se qualquer valor do cofre aparecer nos arquivos.
 - **Em produção** (Hostinger): cadastre `POWERCRM_TOKEN` e `POWERCRM_LIVE=1` nas variáveis de ambiente do painel. Nunca em arquivo do repositório.
@@ -54,12 +81,14 @@ próprios em `products.moto` / `products.carro`.
 index.html          escolha (/)
 motos/index.html    LP de motos
 carros/index.html   LP de carros
+painel/             painel interno (login + leads + relatórios) — ver seção acima
 css/style.css       visual, layout, animações
 js/config.js        ⭐ dados do cliente (PÚBLICO: nunca coloque token aqui)
 js/main.js          animações, formulário de cotação, eventos de conversão
 assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo), partners/ (Grupo Zelo), vendor/ (GSAP + Lenis)
 config/powercrm.json  configuração NÃO secreta do CRM
-scripts/            serve.js (servidor + /api/lead), build.js, vault.ps1, lib/ (lead, powercrm)
+scripts/            serve.js (servidor + /api/lead e /api/painel/*), build.js, vault.ps1
+scripts/lib/        lead.js, powercrm.js, auth.js (login do painel), store.js (leads.jsonl)
 ```
 
 ## Antes de rodar campanha
@@ -101,7 +130,7 @@ git add . && git commit -m "..." && git push
 | Diretório de saída | `dist` |
 | Comando de start | `npm start` |
 | Node | 20 ou 22 |
-| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1` |
+| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET` |
 
 Se a hospedagem for **somente estática** (hPanel → Git → `public_html`), as páginas funcionam, mas `/api/lead` não existe: o formulário ainda abre o
 WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar por um endpoint externo (ex.: Supabase Edge Function) em `leadWebhook`.

@@ -12,6 +12,8 @@ const zlib = require('zlib');
 const build = require('./build');
 const { processLead } = require('./lib/lead');
 const { status: crmStatus } = require('./lib/powercrm');
+const auth = require('./lib/auth');
+const store = require('./lib/store');
 
 const has = (name) => process.argv.includes('--' + name);
 const arg = (name) => { const i = process.argv.indexOf('--' + name); return i > -1 ? process.argv[i + 1] : undefined; };
@@ -21,7 +23,7 @@ const SRC = has('src');
 
 const root = path.resolve(__dirname, '..');
 const dist = path.join(root, 'dist');
-const PUBLIC = ['index.html', 'motos', 'carros', 'css', 'js', 'assets'];
+const PUBLIC = ['index.html', 'motos', 'carros', 'css', 'js', 'assets', 'painel'];
 let webRoot = root;
 if (!SRC) { if (!fs.existsSync(path.join(dist, 'index.html'))) build(); webRoot = dist; }
 
@@ -70,6 +72,15 @@ function readJson(req, limit = 16 * 1024) {
   });
 }
 
+// converte "2026-09-01" (ou timestamp em ms) em epoch ms; vazio/ inválido -> undefined (sem filtro)
+function parseDateParam(v) {
+  if (!v) return undefined;
+  const n = Number(v);
+  if (Number.isFinite(n) && String(n) === v) return n;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? t : undefined;
+}
+
 async function api(req, res, p) {
   if (p === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, crm: crmStatus().state });
   if (p === '/api/lead') {
@@ -85,7 +96,48 @@ async function api(req, res, p) {
       return json(res, e.code || 400, { ok: false, error: e.message === 'too_large' ? 'too_large' : 'invalid' });
     }
   }
+
+  // ---------- Painel interno (/painel): login estático + leads + relatórios ----------
+  if (p === '/api/painel/login') {
+    if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    if (!sameOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' });
+    if (!auth.configured()) return json(res, 503, { ok: false, error: 'not_configured' });
+    if (auth.rateLimited(clientIp(req))) return json(res, 429, { ok: false, error: 'rate_limited' });
+    let body;
+    try { body = await readJson(req); } catch (e) { return json(res, e.code || 400, { ok: false, error: 'invalid' }); }
+    if (!auth.checkCredentials(body && body.user, body && body.pass)) return json(res, 401, { ok: false, error: 'invalid_credentials' });
+    res.setHeader('Set-Cookie', auth.createSessionCookie(String(body.user)));
+    return json(res, 200, { ok: true });
+  }
+  if (p === '/api/painel/logout') {
+    if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    res.setHeader('Set-Cookie', auth.clearSessionCookie());
+    return json(res, 200, { ok: true });
+  }
+  if (p === '/api/painel/leads' || p === '/api/painel/relatorios') {
+    if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
+    const q = new URL(req.url, 'http://x').searchParams;
+    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to')), limit: q.get('limit') || undefined };
+    if (p === '/api/painel/leads') return json(res, 200, Object.assign({ ok: true }, store.listLeads(filters)));
+    return json(res, 200, Object.assign({ ok: true }, store.aggregate(filters)));
+  }
+
   return json(res, 404, { ok: false, error: 'not_found' });
+}
+
+// GET em /painel, /painel/ ou /painel/index.html: exige sessão válida (senão manda pro login).
+// GET em /painel/login(.html) com sessão já válida: manda pro painel (evita mostrar login à toa).
+// Demais arquivos dentro de /painel/ (css, js) são estáticos normais — sem dado nenhum ali.
+function painelPageGuard(req, res, p) {
+  const isShell = p === '/painel' || p === '/painel/' || p === '/painel/index.html';
+  const isLogin = p === '/painel/login' || p === '/painel/login.html';
+  if (!isShell && !isLogin) return false;
+  const authed = auth.isAuthenticated(req);
+  if (isShell && !authed) { res.writeHead(302, Object.assign({ Location: '/painel/login' }, SEC)); res.end(); return true; }
+  if (isLogin && authed) { res.writeHead(302, Object.assign({ Location: '/painel/' }, SEC)); res.end(); return true; }
+  if (p === '/painel') { res.writeHead(302, Object.assign({ Location: '/painel/' }, SEC)); res.end(); return true; }
+  return false; // segue para o serveStatic normal (index.html ou login.html)
 }
 
 function serveStatic(req, res, p) {
@@ -135,6 +187,9 @@ const server = http.createServer((req, res) => {
   let p;
   try { p = decodeURIComponent(req.url.split('?')[0]); } catch (e) { res.writeHead(400); res.end('bad request'); return; }
   if (p.startsWith('/api/')) { api(req, res, p).catch(() => json(res, 500, { ok: false, error: 'server_error' })); return; }
+  if (req.method === 'GET' && painelPageGuard(req, res, p)) return;
+  // rota bonita sem sessão: /painel/login não é um arquivo (o arquivo é login.html)
+  if (p === '/painel/login') p = '/painel/login.html';
   serveStatic(req, res, p);
 });
 

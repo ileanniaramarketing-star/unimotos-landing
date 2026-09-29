@@ -90,6 +90,14 @@ function originFor(cfg, lead) {
   return o.default;
 }
 
+// mesma classificação, mas em nome legível (para o painel de leads, não para o Power CRM)
+function classifyOrigin(lead) {
+  const src = String(lead.utm_source || '').toLowerCase();
+  if (/insta|face|meta|^fb$|^ig$/.test(src)) return 'REDES SOCIAIS';
+  if (/google|gads|adwords/.test(src)) return 'GOOGLE';
+  return 'SITE';
+}
+
 function buildBody(cfg, lead, seller, r) {
   const body = {
     name: lead.nome,
@@ -124,7 +132,11 @@ async function post(cfg, body) {
 }
 
 // Envia o lead (com até 3 novas tentativas em segundo plano se o CRM falhar). Retorna o estado imediato.
-async function sendLead(lead) {
+// opts.onFinal(status), se passado, é chamado quando o resultado muda DEPOIS do retorno síncrono —
+// ou seja, só quando uma tentativa em segundo plano termina (sucesso tardio ou falha definitiva).
+// É o que alimenta o painel de leads (/painel), para o status não ficar "pendente" para sempre.
+async function sendLead(lead, opts) {
+  opts = opts || {};
   const veiculo = VEHICLES.includes(lead.veiculo) ? lead.veiculo : 'moto';
   const st = status(veiculo);
   if (st.state === 'no_token' || st.state === 'not_configured') {
@@ -142,10 +154,15 @@ async function sendLead(lead) {
   }
   const delays = [0, 5000, 30000, 120000];
   const attempt = async (i) => {
-    try { const code = await post(cfg, body); log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', code); return true; }
-    catch (e) {
+    try {
+      const code = await post(cfg, body);
+      log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', code);
+      if (i > 0 && opts.onFinal) opts.onFinal('sent', seller.name);
+      return true;
+    } catch (e) {
       log('falha (tentativa ' + (i + 1) + '/' + delays.length + '):', e.name === 'AbortError' ? 'timeout' : e.message);
       if (i + 1 < delays.length) setTimeout(() => attempt(i + 1), delays[i + 1]);
+      else if (opts.onFinal) opts.onFinal('failed', seller.name);
       return false;
     }
   };
@@ -153,4 +170,4 @@ async function sendLead(lead) {
   return { state: ok ? 'sent' : 'retrying', seller: seller.name };
 }
 
-module.exports = { sendLead, status, maskPhone, originFor };
+module.exports = { sendLead, status, maskPhone, originFor, classifyOrigin };

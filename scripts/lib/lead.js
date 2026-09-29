@@ -1,15 +1,17 @@
 'use strict';
 /* Validação, anti-abuso e encaminhamento dos leads da landing page (servidor). */
-const { sendLead } = require('./powercrm');
+const { sendLead, classifyOrigin } = require('./powercrm');
+const store = require('./store');
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_MAX = 6;           // envios por IP a cada 10 min
 const DEDUPE_MS = 15 * 60 * 1000;
 const hits = new Map();       // ip -> [timestamps]
-const recent = new Map();     // telefone|placa -> timestamp
+const recent = new Map();     // veiculo|telefone|placa -> timestamp
 
 const PLATE = /^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
-const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
+// UTMs + cliques pagos (gclid = Google Ads, fbclid = Meta Ads): vão para o lead e para o painel (/painel)
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
 
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 
@@ -41,7 +43,7 @@ function validate(input) {
   if (!PLATE.test(placa)) errors.push('placa');
   const veiculo = input.veiculo === 'carro' ? 'carro' : 'moto';
   const lead = { tipo: 'cotacao', veiculo, nome, telefone, placa };
-  UTM_KEYS.forEach((k) => { if (input[k]) lead[k] = clean(input[k], 100); });
+  UTM_KEYS.forEach((k) => { if (input[k]) lead[k] = clean(input[k], k === 'gclid' || k === 'fbclid' ? 180 : 100); });
   return { errors, lead };
 }
 
@@ -53,12 +55,18 @@ async function processLead(input, meta) {
   if (errors.length) return { status: 400, body: { ok: false, error: 'invalid', fields: errors } };
   if (rateLimited(meta.ip)) return { status: 429, body: { ok: false, error: 'rate_limited' } };
 
+  lead.crmOrigin = classifyOrigin(lead); // rótulo p/ o painel (SITE / GOOGLE / REDES SOCIAIS) — não é o que vai ao CRM
+  const id = store.recordCreated(lead);
+
   const key = lead.veiculo + '|' + lead.telefone + '|' + lead.placa;
   const last = recent.get(key);
-  if (last && Date.now() - last < DEDUPE_MS) return { status: 200, body: { ok: true, duplicate: true } };
+  if (last && Date.now() - last < DEDUPE_MS) { store.recordStatus(id, 'duplicado'); return { status: 200, body: { ok: true, duplicate: true } }; }
   recent.set(key, Date.now());
 
-  try { await sendLead(lead); } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
+  try {
+    const result = await sendLead(lead, { onFinal: (finalStatus, seller) => store.recordStatus(id, finalStatus, seller) });
+    if (result && result.state) store.recordStatus(id, result.state, result.seller);
+  } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
   return { status: 200, body: { ok: true } }; // o navegador nunca vê detalhes do CRM
 }
 

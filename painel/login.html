@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Painel Unimotos · Entrar</title>
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#050505">
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css?v=44ef2573">
+  <link rel="stylesheet" href="/painel/painel.css?v=fbfa2f7b">
+</head>
+<body>
+  <main class="painel-login">
+    <form class="painel-login__card" id="loginForm" novalidate autocomplete="off">
+      <img class="painel-login__logo" src="/assets/brand/logo-dark.png?v=bdf3dc6e" alt="Unimotos" width="252" height="72" decoding="async">
+      <h1>Painel interno</h1>
+      <p class="sub">Acesso restrito à equipe Unimotos.</p>
+
+      <div class="painel-field">
+        <label for="loginUser">Usuário</label>
+        <input id="loginUser" name="user" type="text" autocomplete="username" required>
+      </div>
+      <div class="painel-field">
+        <label for="loginPass">Senha</label>
+        <input id="loginPass" name="pass" type="password" autocomplete="current-password" required>
+      </div>
+
+      <button class="painel-btn" id="loginBtn" type="submit">Entrar</button>
+      <p class="painel-msg painel-msg--erro" id="loginMsg" hidden></p>
+    </form>
+  </main>
+
+  <script src="/painel/painel.js?v=67a3e148" defer></script>
+</body>
+</html>
