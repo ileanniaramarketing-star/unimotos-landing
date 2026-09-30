@@ -1,0 +1,5 @@
+{
+  "_nota": "Configuração NÃO secreta do Supabase (pode ir para o Git). A chave de serviço fica no cofre (SUPABASE_SERVICE_KEY), nunca aqui — ela dá acesso total ao banco, ignorando as regras de segurança de linha (RLS). Tabela leads criada com RLS ativado e nenhuma regra: só quem usa a chave de serviço (o próprio servidor) consegue ler/escrever.",
+  "url": "https://hrxuvyhctuasuaxmhtny.supabase.co",
+  "projectRef": "hrxuvyhctuasuaxmhtny"
+}

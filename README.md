@@ -45,8 +45,13 @@ pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a co
   pendente, falhou, duplicado, CRM não configurado/sem token). Filtros por veículo, status, texto (nome/telefone/placa) e período.
 - **Aba Relatórios**: total de leads, e a mesma contagem quebrada por veículo, plataforma (`utm_source`), campanha, criativo
   (`utm_content`), origem classificada pro CRM (Site / Google / Redes sociais) e vendedor — com filtro de período.
-- **Onde fica guardado**: `.data/leads.jsonl` (cada lead é uma linha; nunca é servido por HTTP, só lido pelo painel). Não é um
-  banco de dados nem tem interface pra apagar/editar leads — se precisar disso no futuro, dá pra evoluir depois.
+- **Onde fica guardado**: tabela `leads` no **Supabase** (Postgres), com segurança de linha (RLS) ativada e sem nenhuma
+  regra — só quem usa a chave de serviço (`SUPABASE_SERVICE_KEY`, o próprio servidor) consegue ler/escrever; a chave
+  pública ("anon") não enxerga nada. Um arquivo local (usado numa versão anterior) não sobrevive a deploys/reinícios em
+  algumas hospedagens (a Hostinger reconstrói os arquivos do zero) — um banco de verdade sim.
+- **Rodízio de vendedor**: sorteia quem tem **menos leads daquele veículo até agora** (lido direto do Supabase), com
+  empate resolvido aleatoriamente — nunca fica 3×0 pra um lado, e funciona certinho mesmo logo depois de um reinício
+  (diferente de um contador simples em arquivo, que reinicia do zero a cada deploy).
 - **Gerenciar vendedores** (adicionar/remover do rodízio) continua sendo em `config/powercrm.json`, não tem tela pra isso ainda.
 - Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
   cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
@@ -68,6 +73,10 @@ navegador do cliente.
   site e o envio ao Power CRM continuam funcionando normalmente.
 - Gerar/trocar o token: Gerenciador de Eventos do Meta → Configurações → Conversions API →
   Gerar token de acesso (do lado do pixel `2410461069470382`).
+- **PageView**: toda carga de página chama `fbq('track','PageView', ..., {eventID})` no navegador
+  **e** `POST /api/pageview` (mesmo eventId) pro servidor mandar o espelho pela Conversions API —
+  bem mais permissivo que o `/api/lead` (não é uma conversão, é só navegação), sem exigir nem
+  aceitar nenhum dado pessoal.
 
 ## Cofre de segredos (local)
 
@@ -81,7 +90,7 @@ npm run dev                           # sobe http://127.0.0.1:4321 já com o cof
 npm run check:secrets                 # procura os segredos em todos os arquivos e no histórico do Git
 ```
 
-Segredos guardados hoje: `POWERCRM_TOKEN`, os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`) e `META_CAPI_TOKEN` (Meta Conversions API, ver abaixo).
+Segredos guardados hoje: `POWERCRM_TOKEN`, os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`), `META_CAPI_TOKEN` (Meta Conversions API, ver abaixo) e `SUPABASE_SERVICE_KEY` (banco do painel — `config/supabase.json` tem a URL, que não é segredo).
 
 - Há um **pre-commit** local (`.git/hooks/pre-commit`) que **bloqueia o commit** se qualquer valor do cofre aparecer nos arquivos.
 - **Em produção** (Hostinger): cadastre `POWERCRM_TOKEN` e `POWERCRM_LIVE=1` nas variáveis de ambiente do painel. Nunca em arquivo do repositório.
@@ -106,8 +115,9 @@ js/main.js          animações, formulário de cotação, eventos de conversão
 assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo), partners/ (Grupo Zelo), vendor/ (GSAP + Lenis)
 config/powercrm.json  configuração NÃO secreta do CRM
 config/meta.json     configuração NÃO secreta do Meta Pixel/Conversions API
-scripts/            serve.js (servidor + /api/lead e /api/painel/*), build.js, vault.ps1
-scripts/lib/        lead.js, powercrm.js, metacapi.js, auth.js (login do painel), store.js (leads.jsonl)
+config/supabase.json configuração NÃO secreta do Supabase (URL do projeto; a chave fica no cofre)
+scripts/            serve.js (servidor + /api/lead, /api/pageview e /api/painel/*), build.js, vault.ps1
+scripts/lib/        lead.js, powercrm.js, metacapi.js, pageview.js, auth.js (login do painel), store.js (leads no Supabase)
 ```
 
 ## Antes de rodar campanha
@@ -149,7 +159,7 @@ git add . && git commit -m "..." && git push
 | Diretório de saída | `dist` |
 | Comando de start | `npm start` |
 | Node | 20 ou 22 |
-| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`, `META_CAPI_TOKEN` |
+| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`, `META_CAPI_TOKEN`, `SUPABASE_SERVICE_KEY` |
 
 Se a hospedagem for **somente estática** (hPanel → Git → `public_html`), as páginas funcionam, mas `/api/lead` não existe: o formulário ainda abre o
 WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar por um endpoint externo (ex.: Supabase Edge Function) em `leadWebhook`.

@@ -72,8 +72,21 @@
       }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
       /* eslint-enable */
       window.fbq('init', cfg.metaPixelId);
-      window.fbq('track', 'PageView');
+      const pvId = genEventId();
+      window.fbq('track', 'PageView', {}, { eventID: pvId }); // mesmo eventId do servidor -> deduplicação
+      postPageView(pvId);
     }
+  }
+
+  // manda o MESMO evento de PageView pro servidor (Conversions API) — em toda carga de página,
+  // pra funcionar mesmo com bloqueador de anúncio/ITP reduzindo o alcance do pixel no navegador.
+  function postPageView(eventId) {
+    try {
+      const body = { eventId: eventId, pagina: location.origin + location.pathname };
+      const fbp = getCookie('_fbp'); if (fbp) body.fbp = fbp;
+      const fbc = getFbc(); if (fbc) body.fbc = fbc;
+      fetch('/api/pageview', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => {});
+    } catch (e) { /* nunca quebra a página por causa de tracking */ }
   }
 
   // name: 'Contact' (clique no WhatsApp) | 'Lead' (formulário ACEITO pelo servidor — nunca antes disso)

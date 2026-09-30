@@ -35,28 +35,21 @@ function hashPhone(e164) {
   return digits ? sha256(digits) : undefined;
 }
 
-// dispara o evento "Lead"; nunca lança erro (falha de tracking não pode derrubar o envio do lead)
-async function sendLeadEvent(lead, meta) {
-  meta = meta || {};
-  if (!configured()) return; // sem token/pixel configurado: silêncio (não é erro, só não está ligado ainda)
-  let cfg;
-  try { cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); } catch (e) { return; }
-
-  const userData = { ph: [hashPhone(lead.telefone)].filter(Boolean) };
+function buildUserData(meta) {
+  const userData = {};
+  if (meta.phone) { const h = hashPhone(meta.phone); if (h) userData.ph = [h]; }
   if (meta.fbp) userData.fbp = meta.fbp;
   if (meta.fbc) userData.fbc = meta.fbc;
   if (meta.ip) userData.client_ip_address = meta.ip;
   if (meta.userAgent) userData.client_user_agent = meta.userAgent;
+  return userData;
+}
 
-  const event = {
-    event_name: 'Lead',
-    event_time: Math.floor(Date.now() / 1000),
-    event_id: meta.eventId || undefined,        // mesmo id do pixel do navegador -> deduplicação
-    event_source_url: lead.pagina || undefined,
-    action_source: 'website',
-    user_data: userData,
-    custom_data: { content_name: lead.veiculo === 'carro' ? 'Carro' : 'Moto' }
-  };
+// manda 1 evento pro Graph API; nunca lança erro (falha de tracking não pode derrubar nada)
+async function postEvent(eventName, event) {
+  if (!configured()) return; // sem token/pixel configurado: silêncio (não é erro, só não está ligado ainda)
+  let cfg;
+  try { cfg = JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); } catch (e) { return; }
 
   // baseUrl só existe em config/meta.json pra testes automatizados apontarem pra um Graph API falso
   const url = (cfg.baseUrl || 'https://graph.facebook.com') + '/' + (cfg.apiVersion || 'v21.0') + '/' + cfg.pixelId + '/events?access_token=' + encodeURIComponent(token());
@@ -71,10 +64,39 @@ async function sendLeadEvent(lead, meta) {
     });
     const body = await res.text();
     if (!res.ok) log('Meta respondeu HTTP', res.status, '·', body);
-    else log('evento Lead enviado · eventId:', event.event_id);
+    else log('evento ' + eventName + ' enviado · eventId:', event.event_id);
   } catch (e) {
-    log('falha ao enviar evento Lead:', e.name === 'AbortError' ? 'timeout' : e.message);
+    log('falha ao enviar evento ' + eventName + ':', e.name === 'AbortError' ? 'timeout' : e.message);
   } finally { clearTimeout(timer); }
 }
 
-module.exports = { sendLeadEvent, configured, hashPhone };
+// dispara "Lead" — só depois que o lead É ACEITO de verdade pelo servidor (processLead), nunca antes,
+// e nunca para duplicados.
+async function sendLeadEvent(lead, meta) {
+  meta = meta || {};
+  await postEvent('Lead', {
+    event_name: 'Lead',
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: meta.eventId || undefined,        // mesmo id do pixel do navegador -> deduplicação
+    event_source_url: lead.pagina || undefined,
+    action_source: 'website',
+    user_data: buildUserData(Object.assign({ phone: lead.telefone }, meta)),
+    custom_data: { content_name: lead.veiculo === 'carro' ? 'Carro' : 'Moto' }
+  });
+}
+
+// dispara "PageView" — em toda carga de página, espelhando o fbq('track','PageView') do navegador
+// (mesmo eventId dos dois lados). Não tem telefone/PII: só sinais do navegador (fbp/fbc/ip/UA).
+async function sendPageViewEvent(meta) {
+  meta = meta || {};
+  await postEvent('PageView', {
+    event_name: 'PageView',
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: meta.eventId || undefined,
+    event_source_url: meta.pagina || undefined,
+    action_source: 'website',
+    user_data: buildUserData(meta)
+  });
+}
+
+module.exports = { sendLeadEvent, sendPageViewEvent, configured, hashPhone };

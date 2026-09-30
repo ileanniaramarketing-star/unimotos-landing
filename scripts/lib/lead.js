@@ -68,11 +68,15 @@ async function processLead(input, meta) {
   if (rateLimited(meta.ip)) return { status: 429, body: { ok: false, error: 'rate_limited' } };
 
   lead.crmOrigin = classifyOrigin(lead); // rótulo p/ o painel (SITE / GOOGLE / REDES SOCIAIS) — não é o que vai ao CRM
-  const id = store.recordCreated(lead);
+  let id = null;
+  try { id = await store.recordCreated(lead); } catch (e) { console.error('[lead] erro ao gravar no Supabase (painel ficará sem esse lead):', e.message); }
 
   const key = lead.veiculo + '|' + lead.telefone + '|' + lead.placa;
   const last = recent.get(key);
-  if (last && Date.now() - last < DEDUPE_MS) { store.recordStatus(id, 'duplicado'); return { status: 200, body: { ok: true, duplicate: true } }; }
+  if (last && Date.now() - last < DEDUPE_MS) {
+    if (id) store.recordStatus(id, 'duplicado').catch(() => {});
+    return { status: 200, body: { ok: true, duplicate: true } };
+  }
   recent.set(key, Date.now());
 
   // Meta Conversions API: só dispara AGORA que o lead foi de fato aceito (validado, não-duplicado) —
@@ -82,8 +86,8 @@ async function processLead(input, meta) {
 
   let contact = null;
   try {
-    const result = await sendLead(lead, { onFinal: (finalStatus, seller) => store.recordStatus(id, finalStatus, seller) });
-    if (result && result.state) store.recordStatus(id, result.state, result.seller);
+    const result = await sendLead(lead, { onFinal: (finalStatus, seller) => { if (id) store.recordStatus(id, finalStatus, seller).catch(() => {}); } });
+    if (result && result.state && id) store.recordStatus(id, result.state, result.seller).catch(() => {});
     contact = result;
   } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
   // o navegador só vê nome + WhatsApp do vendedor sorteado (pra abrir a conversa certa) — nada mais do CRM

@@ -11,6 +11,7 @@ const path = require('path');
 const zlib = require('zlib');
 const build = require('./build');
 const { processLead } = require('./lib/lead');
+const { processPageView } = require('./lib/pageview');
 const { status: crmStatus } = require('./lib/powercrm');
 const auth = require('./lib/auth');
 const store = require('./lib/store');
@@ -96,6 +97,19 @@ async function api(req, res, p) {
       return json(res, e.code || 400, { ok: false, error: e.message === 'too_large' ? 'too_large' : 'invalid' });
     }
   }
+  // PageView pro Meta Conversions API (espelha o fbq('track','PageView') do navegador, com dedup por eventId)
+  if (p === '/api/pageview') {
+    if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    if (!sameOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' });
+    if (!/^application\/json/i.test(req.headers['content-type'] || '')) return json(res, 415, { ok: false, error: 'unsupported_media_type' });
+    try {
+      const body = await readJson(req, 4 * 1024); // bem menor que o de lead: só campos curtos
+      const out = await processPageView(body, { ip: clientIp(req), userAgent: req.headers['user-agent'] || '' });
+      return json(res, out.status, out.body);
+    } catch (e) {
+      return json(res, e.code || 400, { ok: false, error: 'invalid' });
+    }
+  }
 
   // ---------- Painel interno (/painel): login estático + leads + relatórios ----------
   if (p === '/api/painel/login') {
@@ -119,8 +133,13 @@ async function api(req, res, p) {
     if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
     const q = new URL(req.url, 'http://x').searchParams;
     const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to')), limit: q.get('limit') || undefined };
-    if (p === '/api/painel/leads') return json(res, 200, Object.assign({ ok: true }, store.listLeads(filters)));
-    return json(res, 200, Object.assign({ ok: true }, store.aggregate(filters)));
+    try {
+      if (p === '/api/painel/leads') return json(res, 200, Object.assign({ ok: true }, await store.listLeads(filters)));
+      return json(res, 200, Object.assign({ ok: true }, await store.aggregate(filters)));
+    } catch (e) {
+      console.error('[painel] erro ao consultar o Supabase:', e.message);
+      return json(res, 502, { ok: false, error: 'store_unavailable' });
+    }
   }
 
   return json(res, 404, { ok: false, error: 'not_found' });

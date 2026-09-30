@@ -15,12 +15,11 @@
 */
 const fs = require('fs');
 const path = require('path');
+const store = require('./store');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-// POWERCRM_CONFIG / POWERCRM_DATA_DIR existem só para testes automatizados
+// POWERCRM_CONFIG existe só para testes automatizados
 const CFG_PATH = process.env.POWERCRM_CONFIG || path.join(ROOT, 'config', 'powercrm.json');
-const RR_DIR = process.env.POWERCRM_DATA_DIR || path.join(ROOT, '.data');
-const RR_PATH = path.join(RR_DIR, 'roundrobin.json');
 const VEHICLES = ['moto', 'carro'];
 
 const loadCfg = () => JSON.parse(fs.readFileSync(CFG_PATH, 'utf8'));
@@ -59,18 +58,18 @@ function status(veiculo) {
   return { state: process.env.POWERCRM_LIVE === '1' ? 'live' : 'dry-run' };
 }
 
-// Rodízio por veículo: alterna entre os consultores ativos. Contador em .data/ (se não der para gravar, segue em memória).
-const memNext = {};
-function pickSeller(sellers, veiculo) {
+// Rodízio por veículo: sorteia o consultor ativo com MENOS leads daquele veículo até agora, lendo
+// do banco (Supabase) — sobrevive a qualquer reinício/deploy, diferente de um contador em arquivo
+// local. Empate (inclusive "todos em zero", o caso mais comum) é resolvido por sorteio aleatório —
+// assim mesmo logo depois de um reinício o primeiro lead não cai sempre no mesmo vendedor.
+async function pickSeller(sellers, veiculo) {
   const active = sellers.filter((s) => s.active);
-  let all = {};
-  try { all = JSON.parse(fs.readFileSync(RR_PATH, 'utf8')) || {}; } catch (e) { /* primeira vez */ }
-  const next = Number.isInteger(all[veiculo]) ? all[veiculo] : (memNext[veiculo] || 0);
-  const seller = active[next % active.length];
-  memNext[veiculo] = next + 1;
-  all[veiculo] = next + 1;
-  try { fs.mkdirSync(RR_DIR, { recursive: true }); fs.writeFileSync(RR_PATH, JSON.stringify(all)); } catch (e) { /* ok */ }
-  return seller;
+  if (active.length <= 1) return active[0];
+  let counts = {};
+  try { counts = await store.countsBySeller(veiculo); } catch (e) { log('rodízio: não consegui ler o banco, sorteando aleatório entre todos:', e.message); }
+  const min = Math.min(...active.map((s) => counts[s.name] || 0));
+  const leastLoaded = active.filter((s) => (counts[s.name] || 0) === min);
+  return leastLoaded[Math.floor(Math.random() * leastLoaded.length)];
 }
 
 // "5531987654321" -> "(31) 98765-4321" (mesmo formato que o Power CRM mostra)
@@ -148,7 +147,7 @@ async function sendLead(lead, opts) {
   }
   const cfg = loadCfg();
   const r = resolve(cfg, veiculo);
-  const seller = pickSeller(r.sellers, veiculo);
+  const seller = await pickSeller(r.sellers, veiculo);
   const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r);
   const contact = { seller: seller.name, whatsapp: seller.whatsapp || null };
 
