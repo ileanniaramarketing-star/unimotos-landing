@@ -68,13 +68,13 @@ async function processLead(input, meta) {
   if (rateLimited(meta.ip)) return { status: 429, body: { ok: false, error: 'rate_limited' } };
 
   lead.crmOrigin = classifyOrigin(lead); // rótulo p/ o painel (SITE / GOOGLE / REDES SOCIAIS) — não é o que vai ao CRM
-  let id = null;
-  try { id = await store.recordCreated(lead); } catch (e) { console.error('[lead] erro ao gravar no Supabase (painel ficará sem esse lead):', e.message); }
 
+  // duplicado (mesmo veículo+telefone+placa numa janela curta): grava pro histórico, mas sem
+  // sortear vendedor nem disparar envio nenhum (nem local, nem pelo Supabase)
   const key = lead.veiculo + '|' + lead.telefone + '|' + lead.placa;
   const last = recent.get(key);
   if (last && Date.now() - last < DEDUPE_MS) {
-    if (id) store.recordStatus(id, 'duplicado').catch(() => {});
+    store.recordCreated(lead, null, 'duplicado').catch((e) => console.error('[lead] erro ao gravar duplicado no Supabase:', e.message));
     return { status: 200, body: { ok: true, duplicate: true } };
   }
   recent.set(key, Date.now());
@@ -84,13 +84,13 @@ async function processLead(input, meta) {
   const mt = metaTrackingOf(input);
   metacapi.sendLeadEvent(lead, Object.assign({ ip: meta.ip, userAgent: meta.userAgent }, mt)).catch(() => {});
 
+  // decide o vendedor (rodízio) ANTES de gravar: precisa ir junto no INSERT, porque é esse INSERT
+  // que aciona o envio de verdade ao Power CRM (Supabase, Edge Function "send-lead" via webhook —
+  // ver scripts/lib/powercrm.js). O navegador só vê nome/WhatsApp do vendedor — nada mais do CRM.
   let contact = null;
-  try {
-    const result = await sendLead(lead, { onFinal: (finalStatus, seller, extra) => { if (id) store.recordStatus(id, finalStatus, seller, extra).catch(() => {}); } });
-    if (result && result.state && id) store.recordStatus(id, result.state, result.seller, { quotationCode: result.quotationCode, negotiationCode: result.negotiationCode }).catch(() => {});
-    contact = result;
-  } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
-  // o navegador só vê nome + WhatsApp do vendedor sorteado (pra abrir a conversa certa) — nada mais do CRM
+  try { contact = await sendLead(lead); } catch (e) { console.error('[lead] erro ao decidir vendedor:', e.message); }
+  try { await store.recordCreated(lead, contact && contact.seller, contact && contact.state); } catch (e) { console.error('[lead] erro ao gravar no Supabase (painel/CRM ficarão sem esse lead):', e.message); }
+
   return { status: 200, body: { ok: true, seller: (contact && contact.seller) || null, whatsapp: (contact && contact.whatsapp) || null } };
 }
 

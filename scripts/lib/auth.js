@@ -1,23 +1,34 @@
 'use strict';
 /*
-  Login do painel interno (/painel) — ESTÁTICO: um usuário e uma senha fixos, guardados no cofre
-  (PAINEL_USER, PAINEL_PASS) + um segredo de assinatura (PAINEL_SESSION_SECRET). Sem banco de
-  usuários, sem cadastro. A sessão é um cookie assinado (HMAC-SHA256): o servidor não guarda nada
-  em memória além do limite de tentativas de login — reiniciar o processo não invalida sessões
-  válidas, mas trocar PAINEL_SESSION_SECRET invalida todas de uma vez.
+  Login do painel interno (/painel) — via Supabase Auth: cadastro ABERTO (qualquer pessoa cria uma
+  conta com e-mail/senha) e qualquer conta válida vê TODOS os leads (é um painel de gestão só, sem
+  permissão por pessoa). O navegador fala com o Supabase Auth direto (chave "anon", pública) pra
+  cadastrar/entrar; o SERVIDOR só confere se o token que o Supabase devolveu é válido (1 chamada,
+  só no login) e, se for, cria a MESMA sessão de sempre: um cookie assinado (HMAC-SHA256) — o resto
+  do painel (rotas, páginas, /api/painel/*) continua igual, sem nenhuma outra dependência do
+  Supabase Auth depois do login.
 
-  Nada disso é logado nem devolvido ao navegador em nenhuma resposta.
+  PAINEL_SESSION_SECRET (cofre) continua sendo o segredo que assina esse cookie — trocar ele
+  desloga todo mundo de uma vez. Nada disso é logado nem devolvido ao navegador em nenhuma resposta.
 */
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 
+const ROOT = path.resolve(__dirname, '..', '..');
+const CFG_PATH = process.env.SUPABASE_CONFIG || path.join(ROOT, 'config', 'supabase.json');
 const COOKIE = 'painel_sessao';
 const TTL_MS = 12 * 60 * 60 * 1000; // 12 horas
 
+function loadCfg() { try { return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); } catch (e) { return null; } }
+
 function configured() {
-  return !!(process.env.PAINEL_USER && process.env.PAINEL_PASS && process.env.PAINEL_SESSION_SECRET);
+  if (!process.env.PAINEL_SESSION_SECRET) return false;
+  const cfg = loadCfg();
+  return !!(cfg && cfg.url && cfg.anonKey);
 }
 
-// compara em tempo constante mesmo quando os tamanhos diferem (evita vazar o tamanho da senha certa)
+// compara em tempo constante mesmo quando os tamanhos diferem (evita vazar o tamanho por timing)
 function safeEqual(a, b) {
   const ab = Buffer.from(String(a == null ? '' : a), 'utf8');
   const bb = Buffer.from(String(b == null ? '' : b), 'utf8');
@@ -29,15 +40,25 @@ function hmac(payload) {
   return crypto.createHmac('sha256', process.env.PAINEL_SESSION_SECRET).update(payload).digest('base64url');
 }
 
-function checkCredentials(user, pass) {
-  if (!configured()) return false;
-  const okUser = safeEqual(user, process.env.PAINEL_USER);
-  const okPass = safeEqual(pass, process.env.PAINEL_PASS);
-  return okUser && okPass;
+// confere com o próprio Supabase se o token de acesso (que o navegador recebeu ao cadastrar/entrar)
+// é válido. Devolve o e-mail da conta se for, ou null. É a ÚNICA vez que o Supabase Auth é
+// consultado — depois disso a sessão é 100% nossa (cookie assinado), sem depender de mais nada.
+async function verifySupabaseToken(accessToken) {
+  if (!accessToken) return null;
+  const cfg = loadCfg();
+  if (!cfg || !cfg.url || !cfg.anonKey) return null;
+  try {
+    const res = await fetch(cfg.url.replace(/\/+$/, '') + '/auth/v1/user', {
+      headers: { Authorization: 'Bearer ' + accessToken, apikey: cfg.anonKey }
+    });
+    if (!res.ok) return null;
+    const user = await res.json();
+    return user && user.email ? user.email : null;
+  } catch (e) { return null; }
 }
 
-function createSessionCookie(user) {
-  const payload = Buffer.from(JSON.stringify({ u: user, exp: Date.now() + TTL_MS }), 'utf8').toString('base64url');
+function createSessionCookie(email) {
+  const payload = Buffer.from(JSON.stringify({ u: email, exp: Date.now() + TTL_MS }), 'utf8').toString('base64url');
   const token = payload + '.' + hmac(payload);
   return COOKIE + '=' + token + '; Path=/; HttpOnly; SameSite=Strict; Max-Age=' + Math.floor(TTL_MS / 1000);
 }
@@ -53,7 +74,7 @@ function readCookie(req) {
 }
 
 function verifyToken(token) {
-  if (!configured() || !token) return null;
+  if (!process.env.PAINEL_SESSION_SECRET || !token) return null;
   const i = token.lastIndexOf('.');
   if (i < 0) return null;
   const payload = token.slice(0, i), sig = token.slice(i + 1);
@@ -82,4 +103,4 @@ function rateLimited(ip) {
   return list.length > MAX_ATTEMPTS;
 }
 
-module.exports = { configured, checkCredentials, createSessionCookie, clearSessionCookie, isAuthenticated, rateLimited, COOKIE };
+module.exports = { configured, verifySupabaseToken, createSessionCookie, clearSessionCookie, isAuthenticated, rateLimited, COOKIE };

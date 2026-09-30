@@ -45,15 +45,19 @@ function fromRow(r) {
   };
 }
 
-// evento "created": registra o lead assim que passa nas validações (antes de falar com o CRM).
-// Devolve o id (uuid) da linha criada — usado depois em recordStatus.
-async function recordCreated(lead) {
+// Registra o lead JÁ com o vendedor sorteado (se houver) e o status decidido por sendLead()
+// (dry-run / pendente / not_configured / no_token / duplicado). O status "pendente" com um
+// vendedor preenchido é o que aciona o envio de verdade: um Database Webhook do Supabase dispara
+// sozinho a Edge Function "send-lead" assim que essa linha é criada (ver scripts/lib/powercrm.js).
+// Devolve o id (uuid) da linha criada.
+async function recordCreated(lead, seller, statusValue) {
   const body = {
     tipo: lead.tipo || 'cotacao', veiculo: lead.veiculo, nome: lead.nome, telefone: lead.telefone, placa: lead.placa,
     utm_source: lead.utm_source || null, utm_medium: lead.utm_medium || null, utm_campaign: lead.utm_campaign || null,
     utm_content: lead.utm_content || null, utm_term: lead.utm_term || null, gclid: lead.gclid || null, fbclid: lead.fbclid || null,
-    pagina: lead.pagina || null, crm_origem: lead.crmOrigin || null, status: 'pendente'
+    pagina: lead.pagina || null, crm_origem: lead.crmOrigin || null, status: statusValue || 'pendente'
   };
+  if (seller) body.vendedor = seller;
   const res = await sb('/' + TABLE + '', { method: 'POST', headers: { Prefer: 'return=representation' }, body: JSON.stringify(body) });
   const rows = await res.json();
   return rows[0] && rows[0].id;

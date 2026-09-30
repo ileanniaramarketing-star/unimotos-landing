@@ -1,17 +1,25 @@
 'use strict';
 /*
-  Integração com o Power CRM — roda SÓ no servidor.
-  Endpoint (validado com uma cotação de teste real): POST {baseUrl}/api/quotation/add  (Authorization: Bearer <token>)
-  A cotação entra sozinha na coluna "Cotação Recebida" do funil, atribuída ao consultor do PowerLink (slsmnNwId).
+  Integração com o Power CRM.
 
-  O token vem de process.env.POWERCRM_TOKEN (cofre local via scripts/vault.ps1, ou variável de
-  ambiente do painel da hospedagem). Ele nunca é enviado ao navegador, nunca é logado.
+  O ENVIO DE VERDADE (a chamada de rede pro Power CRM) roda no SUPABASE, não aqui — uma Edge
+  Function (supabase/functions/send-lead/) é acionada sozinha por um Database Webhook assim que um
+  lead é gravado com status "pendente". Isso existe porque a hospedagem (Hostinger) pode encerrar o
+  processo logo depois de responder ao navegador, e um envio deixado "em segundo plano" aqui corria
+  risco de ser interrompido no meio sem erro nenhum (aconteceu de verdade em produção, 2026-09-30) —
+  o Supabase não tem essa limitação.
+
+  Esse arquivo, então, só: decide o VENDEDOR (rodízio, local e instantâneo, lendo contagens do
+  Supabase) e simula o corpo da requisição em modo DRY-RUN (local, sem rede — só pra log/depuração).
+  O token do Power CRM (POWERCRM_TOKEN) continua existindo aqui só pra alimentar o /api/health e o
+  dry-run; quem usa o token pra mandar de verdade é o Supabase (secret próprio dele, configurado
+  separado — ver supabase/functions/send-lead/README.md).
 
   Modos (ver /api/health):
     no_token        sem POWERCRM_TOKEN: não envia nada
     not_configured  falta preencher config/powercrm.json (consultores com PowerLink, cidade padrão…)
     dry-run         tudo configurado, mas POWERCRM_LIVE != 1: só registra o que enviaria (padrão local)
-    live            POWERCRM_LIVE=1: envia de verdade
+    live            POWERCRM_LIVE=1: o Supabase envia de verdade (ver acima)
 */
 const fs = require('fs');
 const path = require('path');
@@ -72,7 +80,8 @@ async function pickSeller(sellers, veiculo) {
   return leastLoaded[Math.floor(Math.random() * leastLoaded.length)];
 }
 
-// "5531987654321" -> "(31) 98765-4321" (mesmo formato que o Power CRM mostra)
+// "5531987654321" -> "(31) 98765-4321" (mesmo formato que o Power CRM mostra) — usado só no dry-run
+// local (a Edge Function no Supabase tem sua própria cópia, é ela quem monta o corpo de verdade)
 function maskPhone(e164) {
   let d = String(e164 || '').replace(/\D/g, '');
   if (d.startsWith('55') && d.length >= 12) d = d.slice(2);
@@ -97,6 +106,8 @@ function classifyOrigin(lead) {
   return 'SITE';
 }
 
+// corpo que SERIA mandado ao Power CRM — usado só pro log do dry-run local (a Edge Function no
+// Supabase monta o corpo de verdade sozinha, com sua própria cópia desta mesma lógica)
 function buildBody(cfg, lead, seller, r) {
   const body = {
     name: lead.nome,
@@ -113,73 +124,28 @@ function buildBody(cfg, lead, seller, r) {
   return body;
 }
 
-async function post(cfg, body) {
-  const t = token();
-  const value = cfg.auth.scheme ? cfg.auth.scheme + ' ' + t : t;
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 10000);
-  try {
-    const res = await fetch(cfg.baseUrl.replace(/\/+$/, '') + '/' + cfg.endpoints.createQuotation.replace(/^\/+/, ''), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json', [cfg.auth.header]: value },
-      body: JSON.stringify(body),
-      signal: ctrl.signal
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error('Power CRM respondeu HTTP ' + res.status);
-    // devolve os códigos da cotação/negociação (pra guardar no painel e depois conferir se foi vendido)
-    return { status: res.status, quotationCode: json.quotationCode || null, negotiationCode: json.negotiationCode || null };
-  } finally { clearTimeout(timer); }
-}
-
-// Decide o vendedor (rodízio, local e instantâneo) e devolve JÁ o resultado, SEM esperar o Power
-// CRM responder — é o que permite ao navegador abrir o WhatsApp do vendedor certo sem o cliente
-// ficar esperando a chamada de rede pro CRM (que pode demorar ou até falhar/repetir).
-// O envio de verdade ao CRM (com até 3 novas tentativas em segundo plano) roda por conta própria.
-// opts.onFinal(status, seller) é chamado sempre que o estado do envio muda DEPOIS do retorno
-// síncrono ('sent', 'retrying' ao tentar de novo, ou 'failed' quando esgotam as tentativas) —
-// é o que alimenta o painel de leads (/painel), para o status não ficar "pendente" para sempre.
-async function sendLead(lead, opts) {
-  opts = opts || {};
+// Decide o vendedor (rodízio, local e instantâneo) e devolve — é o que permite ao navegador abrir
+// o WhatsApp do vendedor certo sem esperar rede nenhuma. Em modo "live", NÃO manda ao Power CRM
+// daqui (ver comentário no topo do arquivo): só devolve o vendedor decidido, pra quem chamou gravar
+// o lead já com o status "pendente" + vendedor — a partir daí o Supabase cuida do envio sozinho.
+async function sendLead(lead) {
   const veiculo = VEHICLES.includes(lead.veiculo) ? lead.veiculo : 'moto';
   const st = status(veiculo);
   if (st.state === 'no_token' || st.state === 'not_configured') {
-    log('lead NÃO enviado ao CRM —', st.state, st.missing ? 'faltando: ' + st.missing.join(', ') : '');
+    log('lead NÃO será enviado ao CRM —', st.state, st.missing ? 'faltando: ' + st.missing.join(', ') : '');
     return st;
   }
   const cfg = loadCfg();
   const r = resolve(cfg, veiculo);
   const seller = await pickSeller(r.sellers, veiculo);
-  const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r);
   const contact = { seller: seller.name, whatsapp: seller.whatsapp || null };
 
   if (st.state === 'dry-run') {
-    log('DRY-RUN (nada foi enviado) · ' + veiculo + ' · consultor:', seller.name, '· corpo:', body);
+    const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r);
+    log('DRY-RUN (nada foi/será enviado) · ' + veiculo + ' · consultor:', seller.name, '· corpo:', body);
     return Object.assign({ state: 'dry-run' }, contact);
   }
-  const delays = [0, 5000, 30000, 120000];
-  const attempt = async (i) => {
-    try {
-      const resp = await post(cfg, body);
-      log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', resp.status, '· cotação:', resp.quotationCode);
-      if (i > 0 && opts.onFinal) opts.onFinal('sent', seller.name, { quotationCode: resp.quotationCode, negotiationCode: resp.negotiationCode });
-      return { ok: true, resp };
-    } catch (e) {
-      log('falha (tentativa ' + (i + 1) + '/' + delays.length + '):', e.name === 'AbortError' ? 'timeout' : e.message);
-      if (i + 1 < delays.length) { if (i > 0 && opts.onFinal) opts.onFinal('retrying', seller.name); setTimeout(() => attempt(i + 1), delays[i + 1]); }
-      else if (opts.onFinal) opts.onFinal('failed', seller.name);
-      return { ok: false };
-    }
-  };
-  // espera SÓ a 1ª tentativa (uma chamada de rede) antes de responder: em hospedagens que podem
-  // encerrar o processo logo após a resposta (ex.: serverless), um envio deixado "em segundo plano"
-  // corre risco de nunca terminar, e o lead fica pendente pra sempre sem erro nenhum no log — foi o
-  // que aconteceu de verdade em produção (2026-09-30). O vendedor já foi decidido antes (rápido, sem
-  // rede), então o WhatsApp continua abrindo rápido — só a confirmação do CRM espera essa 1ª chamada.
-  // Se ela falhar, as tentativas seguintes continuam em segundo plano (onFinal cobre esse caso).
-  const first = await attempt(0);
-  if (first.ok) return Object.assign({ state: 'sent', quotationCode: first.resp.quotationCode, negotiationCode: first.resp.negotiationCode }, contact);
-  return Object.assign({ state: 'retrying' }, contact);
+  return Object.assign({ state: 'pendente' }, contact); // o Supabase assume a partir daqui
 }
 
-module.exports = { sendLead, status, maskPhone, originFor, classifyOrigin };
+module.exports = { sendLead, status, maskPhone, originFor, classifyOrigin, buildBody, resolve };

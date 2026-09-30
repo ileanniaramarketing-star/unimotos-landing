@@ -14,30 +14,47 @@ HTML/CSS/JS puros, sem dependências para instalar (GSAP e Lenis estão em `asse
 ## Como o lead chega ao CRM (e por que o token nunca vai ao navegador)
 
 ```
-Navegador ──POST /api/lead──▶ servidor do site ──(token + rodízio)──▶ Power CRM
-   (nome, WhatsApp, placa)       valida, barra robô,                   funil / vendedor
-   NUNCA vê o token              lê POWERCRM_TOKEN do ambiente
+Navegador ──POST /api/lead──▶ servidor do site ──grava no Supabase──▶ Database Webhook ──▶ Edge Function "send-lead" ──▶ Power CRM
+   (nome, WhatsApp, placa)     decide o vendedor      (status: pendente,     (dispara sozinho,         (token próprio,          funil / vendedor
+   NUNCA vê nenhum token       (rodízio), responde     vendedor já definido)  sem o Node precisar        roda no Supabase)
+   nem espera o CRM            rápido ao navegador                           esperar nem continuar
+                                                                              rodando)
 ```
 
-- O formulário só fala com o **próprio site**. O token existe apenas no servidor, como variável de ambiente.
-- O WhatsApp abre em paralelo: se o CRM estiver fora do ar, o lead não se perde para o cliente.
+- O formulário só fala com o **próprio site**. Nenhum token do Power CRM existe no navegador.
+- O **envio de verdade ao Power CRM roda no Supabase** (Edge Function `send-lead`, ver
+  `supabase/functions/send-lead/`), não no servidor Node/Hostinger. Motivo: essa hospedagem pode
+  encerrar o processo logo depois de responder ao navegador (tipo "serverless") — um envio deixado
+  "em segundo plano" lá corria risco de ser cortado no meio, sem erro nenhum (aconteceu de verdade
+  em produção, 30/09/2026). O Node só decide o **vendedor** (rodízio, instantâneo, lendo contagens
+  do próprio Supabase) e grava o lead já com `vendedor` + `status: "pendente"` — é essa combinação,
+  gravada na tabela `leads`, que um **Database Webhook** do Supabase detecta e usa para chamar a
+  função sozinho, dentro de menos de 1 segundo, sem o Node precisar esperar ou continuar rodando.
+- O WhatsApp abre em paralelo (resposta imediata do Node, sem esperar o Supabase): se o CRM estiver fora do ar, o lead não se perde para o cliente.
 - O servidor valida tudo de novo (nome, telefone BR, placa), tem isca anti-robô, limite por IP, anti-duplicidade e só aceita requisições da própria origem.
-- **Rodízio** entre Vitor e Kethlen (alternando, por veículo), `config/powercrm.json`. Quem decide o vendedor da vez é o **próprio site** (antes de mandar ao CRM) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
+- **Rodízio** entre Vitor e Kethlen (alternando, por veículo), `config/powercrm.json`. Quem decide o vendedor da vez é o **próprio site** (antes de gravar no Supabase) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
 - Enquanto `config/powercrm.json` não estiver preenchido, o servidor só registra no log que o lead **não** foi ao CRM (`crm: not_configured` em `/api/health`).
-  Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar); só `POWERCRM_LIVE=1` envia de verdade.
+  Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar — nunca grava `status: "pendente"`, então nunca aciona o webhook); só `POWERCRM_LIVE=1` faz o Node gravar pronto pra envio.
+- Detalhes de deploy, segredos e redeploy da função: `supabase/functions/send-lead/README.md`. Migração do gatilho: `supabase/migrations/0001_send_lead_webhook.sql`.
 
 ## Painel interno (`/painel`): leads e relatórios
 
 Painel de uso da própria equipe (não é público) para acompanhar os leads que chegam pelo site, **sem depender do Power CRM**
 pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a cotação pro CRM.
 
-- **Login estático**: um usuário e uma senha fixos (sem cadastro, sem "esqueci a senha"), guardados no cofre:
+- **Login: cadastro aberto via Supabase Auth**. Qualquer pessoa com e-mail/senha pode criar conta na
+  tela `/painel/login` (botão "Cadastre-se") e já ver **todos** os leads — é um painel de gestão só,
+  sem permissão por pessoa/cargo. O navegador fala direto com o Supabase Auth (chave pública `anonKey`
+  em `config/supabase.json`, não é segredo); nosso servidor só confere UMA VEZ, no login, se aquele
+  token é válido (chamando o próprio Supabase) e cria a sessão de sempre (cookie assinado, 12h).
   ```powershell
-  npm run vault -- set PAINEL_USER              # ex.: admin
-  npm run vault -- set PAINEL_PASS              # senha (dá pra gerar uma forte: só digitar algo longo)
-  npm run vault -- set PAINEL_SESSION_SECRET    # uma string aleatória grande (assina a sessão; nunca precisa digitar de novo)
+  npm run vault -- set PAINEL_SESSION_SECRET    # string aleatória grande (assina a sessão; nunca precisa digitar de novo)
   ```
-  Sem os três preenchidos, `/painel` responde "não configurado" (503 no login) — o site continua funcionando normalmente.
+  Sem isso preenchido, `/painel` responde "não configurado" (503 no login) — o site continua funcionando normalmente.
+  **Confirmação por e-mail**: por padrão o Supabase exige confirmar o e-mail antes do 1º login (o Claude Code não
+  pode desligar isso sozinho — é uma decisão de segurança). Pra cadastro com acesso IMEDIATO (sem confirmar
+  e-mail), desligue em **Supabase → Authentication → Settings → "Confirm email"**.
+  Criar/resetar uma conta manualmente (sem passar pela tela): Supabase → Authentication → Users → "Add user".
 - **Sessão**: cookie assinado (HttpOnly, só HTTP — nenhum JS lê), dura 12h. Reiniciar o servidor não desconecta ninguém;
   trocar `PAINEL_SESSION_SECRET` desconecta todo mundo de uma vez (útil se alguém sair da equipe).
 - **Aba Leads**: nome, telefone, placa, veículo, UTMs (`utm_source/campaign/content`), **GCLID** (clique do Google Ads) e
@@ -97,7 +114,12 @@ npm run dev                           # sobe http://127.0.0.1:4321 já com o cof
 npm run check:secrets                 # procura os segredos em todos os arquivos e no histórico do Git
 ```
 
-Segredos guardados hoje: `POWERCRM_TOKEN`, os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`), `META_CAPI_TOKEN` (Meta Conversions API, ver abaixo) e `SUPABASE_SERVICE_KEY` (banco do painel — `config/supabase.json` tem a URL, que não é segredo).
+Segredos guardados hoje: `PAINEL_SESSION_SECRET` do [painel interno](#painel-interno-painel-leads-e-relatórios) (login em si é Supabase Auth, cadastro aberto — sem usuário/senha fixos), `META_CAPI_TOKEN` (Meta Conversions API, ver abaixo) e `SUPABASE_SERVICE_KEY` (banco do painel — `config/supabase.json` tem a URL e a chave pública `anonKey`, que não são segredo).
+
+Três segredos não são mais lidos pelo Node/Hostinger, mas continuam no cofre local porque são usados fora do servidor:
+- `POWERCRM_TOKEN`: hoje é a Edge Function `send-lead` (Supabase) que manda de verdade ao Power CRM — o Node só guarda uma cópia pra alimentar `/api/health` e o preview do dry-run. Configurado como *Function Secret* separado no Supabase (ver `supabase/functions/send-lead/README.md`).
+- `SUPABASE_WEBHOOK_SECRET`: valor do *Function Secret* `WEBHOOK_SHARED_SECRET` da mesma função — protege a função (publicada sem verificar JWT) de ser chamada por qualquer um que descubra a URL. Guardado aqui só para poder recriar o gatilho do banco (`supabase/migrations/0001_send_lead_webhook.sql`) se precisar.
+- `SUPABASE_ACCESS_TOKEN`: token de acesso à Management API do Supabase, usado só para fazer deploy/configurar a Edge Function e seus secrets (não é lido pelo site).
 
 - Há um **pre-commit** local (`.git/hooks/pre-commit`) que **bloqueia o commit** se qualquer valor do cofre aparecer nos arquivos.
 - **Em produção** (Hostinger): cadastre `POWERCRM_TOKEN` e `POWERCRM_LIVE=1` nas variáveis de ambiente do painel. Nunca em arquivo do repositório.
@@ -125,6 +147,8 @@ config/meta.json     configuração NÃO secreta do Meta Pixel/Conversions API
 config/supabase.json configuração NÃO secreta do Supabase (URL do projeto; a chave fica no cofre)
 scripts/            serve.js (servidor + /api/lead, /api/pageview e /api/painel/*), build.js, vault.ps1
 scripts/lib/        lead.js, powercrm.js, metacapi.js, pageview.js, auth.js (login do painel), store.js (leads no Supabase)
+supabase/functions/send-lead/  Edge Function que manda de verdade ao Power CRM (ver seção acima)
+supabase/migrations/            SQL do gatilho (Database Webhook) que aciona a função
 ```
 
 ## Antes de rodar campanha
@@ -166,7 +190,7 @@ git add . && git commit -m "..." && git push
 | Diretório de saída | `dist` |
 | Comando de start | `npm start` |
 | Node | 20 ou 22 |
-| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`, `META_CAPI_TOKEN`, `SUPABASE_SERVICE_KEY` |
+| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_SESSION_SECRET`, `META_CAPI_TOKEN`, `SUPABASE_SERVICE_KEY` |
 
 Se a hospedagem for **somente estática** (hPanel → Git → `public_html`), as páginas funcionam, mas `/api/lead` não existe: o formulário ainda abre o
 WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar por um endpoint externo (ex.: Supabase Edge Function) em `leadWebhook`.

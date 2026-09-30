@@ -1,5 +1,6 @@
 {
-  "_nota": "Configuração NÃO secreta do Supabase (pode ir para o Git). A chave de serviço fica no cofre (SUPABASE_SERVICE_KEY), nunca aqui — ela dá acesso total ao banco, ignorando as regras de segurança de linha (RLS). Tabela leads criada com RLS ativado e nenhuma regra: só quem usa a chave de serviço (o próprio servidor) consegue ler/escrever.",
+  "_nota": "Configuração NÃO secreta do Supabase (pode ir para o Git). A chave de serviço fica no cofre (SUPABASE_SERVICE_KEY), nunca aqui — ela dá acesso total ao banco, ignorando as regras de segurança de linha (RLS). Tabela leads criada com RLS ativado e nenhuma regra: só quem usa a chave de serviço (o próprio servidor) consegue ler/escrever. anonKey É pública de propósito (roda no navegador, na tela de login do painel) — serve só pra falar com o Supabase Auth (cadastro/login), nunca dá acesso ao banco de leads.",
   "url": "https://hrxuvyhctuasuaxmhtny.supabase.co",
-  "projectRef": "hrxuvyhctuasuaxmhtny"
+  "projectRef": "hrxuvyhctuasuaxmhtny",
+  "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeHV2eWhjdHVhc3VheG1odG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzA1NzcsImV4cCI6MjEwNjMwNjU3N30.JnRM8fEifuAfqBqvoxpB6zpN1HZ5Zz-Gl5dTWojhBfw"
 }

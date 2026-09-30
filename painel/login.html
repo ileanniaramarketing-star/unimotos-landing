@@ -11,29 +11,32 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=44ef2573">
-  <link rel="stylesheet" href="/painel/painel.css?v=fbfa2f7b">
+  <link rel="stylesheet" href="/painel/painel.css?v=78709611">
+  <!-- Configuração pública do Supabase Auth (não é segredo — é feita pra rodar no navegador) -->
+  <script>window.PAINEL_CONFIG = { supabaseUrl: "https://hrxuvyhctuasuaxmhtny.supabase.co", supabaseAnonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhyeHV2eWhjdHVhc3VheG1odG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3MzA1NzcsImV4cCI6MjEwNjMwNjU3N30.JnRM8fEifuAfqBqvoxpB6zpN1HZ5Zz-Gl5dTWojhBfw" };</script>
 </head>
 <body>
   <main class="painel-login">
     <form class="painel-login__card" id="loginForm" novalidate autocomplete="off">
       <img class="painel-login__logo" src="/assets/brand/logo-dark.png?v=bdf3dc6e" alt="Unimotos" width="252" height="72" decoding="async">
-      <h1>Painel interno</h1>
-      <p class="sub">Acesso restrito à equipe Unimotos.</p>
+      <h1 id="loginTitle">Painel interno</h1>
+      <p class="sub" id="loginSub">Entre com seu e-mail e senha.</p>
 
       <div class="painel-field">
-        <label for="loginUser">Usuário</label>
-        <input id="loginUser" name="user" type="text" autocomplete="username" required>
+        <label for="loginUser">E-mail</label>
+        <input id="loginUser" name="user" type="email" autocomplete="username" required>
       </div>
       <div class="painel-field">
         <label for="loginPass">Senha</label>
-        <input id="loginPass" name="pass" type="password" autocomplete="current-password" required>
+        <input id="loginPass" name="pass" type="password" autocomplete="current-password" required minlength="6">
       </div>
 
       <button class="painel-btn" id="loginBtn" type="submit">Entrar</button>
       <p class="painel-msg painel-msg--erro" id="loginMsg" hidden></p>
+      <button class="painel-link" id="toggleModeBtn" type="button">Ainda não tem conta? Cadastre-se</button>
     </form>
   </main>
 
-  <script src="/painel/painel.js?v=67a3e148" defer></script>
+  <script src="/painel/painel.js?v=018f3797" defer></script>
 </body>
 </html>

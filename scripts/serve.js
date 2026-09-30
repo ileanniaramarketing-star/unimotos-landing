@@ -111,7 +111,9 @@ async function api(req, res, p) {
     }
   }
 
-  // ---------- Painel interno (/painel): login estático + leads + relatórios ----------
+  // ---------- Painel interno (/painel): login via Supabase Auth + leads + relatórios ----------
+  // O navegador já cadastrou/entrou direto no Supabase (chave pública "anon") e tem um token de
+  // acesso; aqui só confirmamos com o Supabase que esse token é válido e criamos NOSSA sessão.
   if (p === '/api/painel/login') {
     if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
     if (!sameOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' });
@@ -119,8 +121,9 @@ async function api(req, res, p) {
     if (auth.rateLimited(clientIp(req))) return json(res, 429, { ok: false, error: 'rate_limited' });
     let body;
     try { body = await readJson(req); } catch (e) { return json(res, e.code || 400, { ok: false, error: 'invalid' }); }
-    if (!auth.checkCredentials(body && body.user, body && body.pass)) return json(res, 401, { ok: false, error: 'invalid_credentials' });
-    res.setHeader('Set-Cookie', auth.createSessionCookie(String(body.user)));
+    const email = await auth.verifySupabaseToken(body && body.accessToken);
+    if (!email) return json(res, 401, { ok: false, error: 'invalid_credentials' });
+    res.setHeader('Set-Cookie', auth.createSessionCookie(email));
     return json(res, 200, { ok: true });
   }
   if (p === '/api/painel/logout') {

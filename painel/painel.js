@@ -15,24 +15,81 @@
   const fmtPhone = (e164) => { const d = String(e164 || '').replace(/\D/g, '').replace(/^55/, ''); return d.length >= 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, -4) + '-' + d.slice(-4) : (e164 || ''); };
 
   /* ------------------------------------------------------------------ *
-   * LOGIN
+   * LOGIN / CADASTRO — fala direto com o Supabase Auth (chave pública "anon")
+   * pra cadastrar ou entrar; o token que ele devolve é conferido pelo NOSSO
+   * servidor uma única vez (/api/painel/login), que aí cria a sessão de sempre.
+   * Cadastro é aberto: qualquer e-mail/senha válidos criam uma conta com
+   * acesso a tudo (é um painel de gestão só, sem permissão por pessoa).
    * ------------------------------------------------------------------ */
   function initLogin() {
     const form = $('#loginForm'); if (!form) return;
-    const btn = $('#loginBtn'), msg = $('#loginMsg');
-    const showError = (t) => { msg.textContent = t; msg.hidden = false; };
+    const btn = $('#loginBtn'), msg = $('#loginMsg'), toggle = $('#toggleModeBtn');
+    const title = $('#loginTitle'), sub = $('#loginSub');
+    const cfg = window.PAINEL_CONFIG || {};
+    let mode = 'login'; // 'login' | 'signup'
+
+    const showMsg = (t, ok) => { msg.textContent = t; msg.className = 'painel-msg ' + (ok ? 'painel-msg--ok' : 'painel-msg--erro'); msg.hidden = false; };
+
+    function applyMode() {
+      if (mode === 'login') {
+        title.textContent = 'Painel interno'; sub.textContent = 'Entre com seu e-mail e senha.';
+        btn.textContent = 'Entrar'; toggle.textContent = 'Ainda não tem conta? Cadastre-se';
+      } else {
+        title.textContent = 'Criar conta'; sub.textContent = 'Cadastre-se para acessar o painel.';
+        btn.textContent = 'Cadastrar'; toggle.textContent = 'Já tem conta? Entrar';
+      }
+      msg.hidden = true;
+    }
+    toggle.addEventListener('click', () => { mode = mode === 'login' ? 'signup' : 'login'; applyMode(); });
+
+    // pede ao Supabase Auth pra criar a conta ou entrar numa já existente
+    async function supabaseAuth(path, email, password) {
+      const r = await fetch(cfg.supabaseUrl + '/auth/v1/' + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', apikey: cfg.supabaseAnonKey },
+        body: JSON.stringify({ email, password })
+      });
+      const j = await r.json().catch(() => ({}));
+      return { ok: r.ok, status: r.status, data: j };
+    }
+
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       msg.hidden = true; btn.disabled = true;
+      const email = $('#loginUser').value.trim(), pass = $('#loginPass').value;
       try {
-        const r = await fetch('/api/painel/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user: $('#loginUser').value, pass: $('#loginPass').value }) });
+        if (!cfg.supabaseUrl || !cfg.supabaseAnonKey) { showMsg('O painel ainda não foi configurado.'); return; }
+
+        let accessToken = null;
+        if (mode === 'signup') {
+          const res = await supabaseAuth('signup', email, pass);
+          if (!res.ok) {
+            const m = (res.data && res.data.msg) || (res.data && res.data.error_description) || '';
+            if (res.status === 422 || /already registered|already exists/i.test(m)) showMsg('Esse e-mail já tem conta. Clique em "Já tem conta? Entrar".');
+            else if (/password/i.test(m)) showMsg('Senha muito curta (mínimo 6 caracteres).');
+            else showMsg('Não deu para cadastrar agora. Tente novamente.');
+            return;
+          }
+          if (res.data && res.data.access_token) accessToken = res.data.access_token;
+          else { showMsg('Conta criada! Confira seu e-mail para confirmar antes de entrar.', true); mode = 'login'; applyMode(); return; }
+        } else {
+          const res = await supabaseAuth('token?grant_type=password', email, pass);
+          if (!res.ok) {
+            if (res.status === 400) showMsg('E-mail ou senha incorretos.');
+            else showMsg('Não deu para entrar agora. Tente novamente.');
+            return;
+          }
+          accessToken = res.data && res.data.access_token;
+        }
+        if (!accessToken) { showMsg('Não deu para entrar agora. Tente novamente.'); return; }
+
+        // token do Supabase confirmado pelo nosso servidor -> cria a sessão do painel (cookie de sempre)
+        const r = await fetch('/api/painel/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ accessToken }) });
         if (r.ok) { location.href = '/painel/'; return; }
-        const j = await r.json().catch(() => ({}));
-        if (r.status === 401) showError('Usuário ou senha incorretos.');
-        else if (r.status === 429) showError('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
-        else if (r.status === 503) showError('O painel ainda não foi configurado (faltam as credenciais no servidor).');
-        else showError('Não deu para entrar agora. Tente novamente.');
-      } catch (e2) { showError('Falha de conexão. Verifique a internet e tente de novo.'); }
+        if (r.status === 429) showMsg('Muitas tentativas. Aguarde alguns minutos e tente de novo.');
+        else if (r.status === 503) showMsg('O painel ainda não foi configurado (faltam as credenciais no servidor).');
+        else showMsg('Não deu para confirmar a sessão agora. Tente novamente.');
+      } catch (e2) { showMsg('Falha de conexão. Verifique a internet e tente de novo.'); }
       finally { btn.disabled = false; }
     });
   }

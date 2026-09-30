@@ -20,6 +20,9 @@
 .painel-msg { margin-top: 16px; padding: 10px 14px; border-radius: 10px; font-size: .85rem; text-align: center; }
 .painel-msg[hidden] { display: none; }
 .painel-msg--erro { background: rgba(227, 27, 35, .14); border: 1px solid rgba(227, 27, 35, .4); color: #ffb3b3; }
+.painel-msg--ok { background: rgba(60, 200, 120, .12); border: 1px solid rgba(60, 200, 120, .4); color: #9be8bb; }
+.painel-link { display: block; width: 100%; margin-top: 14px; padding: 0; border: 0; background: none; color: var(--muted); font: 600 .85rem var(--f-body); text-align: center; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.painel-link:hover { color: #fff; }
 
 /* ---------- estrutura do painel (topo + abas) ---------- */
 body.painel-shell { display: flex; flex-direction: column; min-height: 100svh; }
