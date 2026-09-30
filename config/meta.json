@@ -1,0 +1,5 @@
+{
+  "_nota": "Configuração NÃO secreta do Meta (Facebook/Instagram Ads). O token da Conversions API fica no cofre (META_CAPI_TOKEN), nunca aqui. O pixelId é público (já roda no navegador via js/config.js -> metaPixelId) e precisa ser igual aqui pro servidor mandar o evento 'Lead' pro MESMO pixel, com deduplicação (eventId) entre o navegador e o servidor.",
+  "pixelId": "2410461069470382",
+  "apiVersion": "v21.0"
+}

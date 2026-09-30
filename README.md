@@ -51,6 +51,24 @@ pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a co
 - Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
   cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
 
+## Meta Pixel + Conversions API (Facebook/Instagram Ads)
+
+`js/config.js -> metaPixelId` (público, já preenchido). O evento **"Lead"** só é disparado no
+navegador **depois** que o próprio servidor confirma que aceitou o lead de verdade (nunca antes,
+nunca em duplicado) — evita contar conversão que não aconteceu. Além do pixel do navegador, o
+**servidor também manda o mesmo evento pela Conversions API** (`scripts/lib/metacapi.js`), com o
+telefone sempre em hash SHA-256 (nunca em texto puro) e o **mesmo `eventId`** dos dois lados —
+assim o Meta entende que é o mesmo evento visto de dois jeitos e não conta em dobro (deduplicação
+oficial da Meta). Isso deixa o rastreamento mais confiável mesmo com bloqueador de anúncio/ITP no
+navegador do cliente.
+
+- Token: `META_CAPI_TOKEN` no cofre (é uma credencial de verdade — nunca em arquivo do repositório).
+- Pixel/versão da API: `config/meta.json` (não é segredo, pode ir pro Git).
+- Sem o token configurado: o servidor simplesmente não tenta mandar nada (silêncio, sem erro) — o
+  site e o envio ao Power CRM continuam funcionando normalmente.
+- Gerar/trocar o token: Gerenciador de Eventos do Meta → Configurações → Conversions API →
+  Gerar token de acesso (do lado do pixel `2410461069470382`).
+
 ## Cofre de segredos (local)
 
 `.local/secrets.vault.json` — ignorado pelo Git, com ACL só do dono, valores cifrados pelo Windows (DPAPI): só abre no seu usuário do Windows nesta máquina.
@@ -63,7 +81,7 @@ npm run dev                           # sobe http://127.0.0.1:4321 já com o cof
 npm run check:secrets                 # procura os segredos em todos os arquivos e no histórico do Git
 ```
 
-Segredos guardados hoje: `POWERCRM_TOKEN` e os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`).
+Segredos guardados hoje: `POWERCRM_TOKEN`, os três do [painel interno](#painel-interno-painel-leads-e-relatórios) (`PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`) e `META_CAPI_TOKEN` (Meta Conversions API, ver abaixo).
 
 - Há um **pre-commit** local (`.git/hooks/pre-commit`) que **bloqueia o commit** se qualquer valor do cofre aparecer nos arquivos.
 - **Em produção** (Hostinger): cadastre `POWERCRM_TOKEN` e `POWERCRM_LIVE=1` nas variáveis de ambiente do painel. Nunca em arquivo do repositório.
@@ -87,8 +105,9 @@ js/config.js        ⭐ dados do cliente (PÚBLICO: nunca coloque token aqui)
 js/main.js          animações, formulário de cotação, eventos de conversão
 assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo), partners/ (Grupo Zelo), vendor/ (GSAP + Lenis)
 config/powercrm.json  configuração NÃO secreta do CRM
+config/meta.json     configuração NÃO secreta do Meta Pixel/Conversions API
 scripts/            serve.js (servidor + /api/lead e /api/painel/*), build.js, vault.ps1
-scripts/lib/        lead.js, powercrm.js, auth.js (login do painel), store.js (leads.jsonl)
+scripts/lib/        lead.js, powercrm.js, metacapi.js, auth.js (login do painel), store.js (leads.jsonl)
 ```
 
 ## Antes de rodar campanha
@@ -130,7 +149,7 @@ git add . && git commit -m "..." && git push
 | Diretório de saída | `dist` |
 | Comando de start | `npm start` |
 | Node | 20 ou 22 |
-| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET` |
+| Variáveis de ambiente | `POWERCRM_TOKEN`, `POWERCRM_LIVE=1`, `PAINEL_USER`, `PAINEL_PASS`, `PAINEL_SESSION_SECRET`, `META_CAPI_TOKEN` |
 
 Se a hospedagem for **somente estática** (hPanel → Git → `public_html`), as páginas funcionam, mas `/api/lead` não existe: o formulário ainda abre o
 WhatsApp, porém o lead **não chega ao CRM**. Nesse caso o envio deve passar por um endpoint externo (ex.: Supabase Edge Function) em `leadWebhook`.

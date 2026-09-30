@@ -41,7 +41,7 @@ window.UNI_CONFIG = {
 
   /* --- Rastreamento (deixe vazio para não carregar) --------------------- */
   gtmId: "",          // ex.: "GTM-XXXXXXX"
-  metaPixelId: "",    // ex.: "1234567890"
+  metaPixelId: "2410461069470382",
   ga4Id: "",          // ex.: "G-XXXXXXXXXX"
 
   /* --- Rodapé / institucional ------------------------------------------ */

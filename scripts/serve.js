@@ -89,7 +89,7 @@ async function api(req, res, p) {
     if (!/^application\/json/i.test(req.headers['content-type'] || '')) return json(res, 415, { ok: false, error: 'unsupported_media_type' });
     try {
       const body = await readJson(req);
-      const out = await processLead(body, { ip: clientIp(req) });
+      const out = await processLead(body, { ip: clientIp(req), userAgent: req.headers['user-agent'] || '' });
       return json(res, out.status, out.body);
     } catch (e) {
       if (e.code === 413) { res.setHeader('Connection', 'close'); res.once('finish', () => req.destroy()); }

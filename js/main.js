@@ -76,22 +76,38 @@
     }
   }
 
-  // name: 'Contact' (clique no WhatsApp) | 'Lead' (formulário enviado)
-  function track(name, params) {
+  // name: 'Contact' (clique no WhatsApp) | 'Lead' (formulário ACEITO pelo servidor — nunca antes disso)
+  // opts.eventId: mesmo id mandado ao servidor (Conversions API) -> Meta deduplica os dois lados.
+  function track(name, params, opts) {
     const data = Object.assign({ veiculo: VEHICLE }, params || {}, utm);
     try {
       window.dataLayer.push(Object.assign({ event: name === 'Lead' ? 'generate_lead' : 'whatsapp_click' }, data));
-      if (window.fbq) window.fbq('track', name, data);
+      if (window.fbq) { if (opts && opts.eventId) window.fbq('track', name, data, { eventID: opts.eventId }); else window.fbq('track', name, data); }
       if (window.gtag) window.gtag('event', name === 'Lead' ? 'generate_lead' : 'whatsapp_click', data);
     } catch (e) { /* nunca quebrar a página por causa de tracking */ }
   }
+
+  // cookies do próprio Pixel do Meta (_fbp sempre; _fbc só existe se veio de um clique de anúncio).
+  // Servem pra Conversions API (servidor) casar com o mesmo visitante que o pixel do navegador viu.
+  function getCookie(name) {
+    const m = document.cookie.match('(?:^|; )' + name + '=([^;]*)');
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function getFbc() {
+    const c = getCookie('_fbc');
+    if (c) return c;
+    // pixel ainda não gravou o cookie (ex.: bloqueador) -> reconstrói a partir do fbclid da URL
+    return utm.fbclid ? 'fb.1.' + Date.now() + '.' + utm.fbclid : '';
+  }
+  const genEventId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'ev-' + Date.now() + '-' + Math.random().toString(36).slice(2);
 
   function waUrl(kind, extra) {
     const msgs = cfg.messages || {};
     let text = msgs[kind] || msgs.default || '';
     if (text && typeof text === 'object') text = text[VEHICLE] || ''; // mensagens podem ser { moto, carro }
     if (extra && extra.append) text += '\n\n' + extra.append;
-    return 'https://wa.me/' + digits(cfg.whatsapp) + '?text=' + encodeURIComponent(text);
+    const phone = (extra && extra.phone) || cfg.whatsapp; // extra.phone = vendedor sorteado no rodízio
+    return 'https://wa.me/' + digits(phone) + '?text=' + encodeURIComponent(text);
   }
 
   function applyConfig() {
@@ -185,16 +201,20 @@
    * O navegador NUNCA fala com o CRM nem vê o token: só envia o lead ao próprio servidor do site.
    * A consulta automática da placa é opcional: só roda se cfg.plateLookupUrl estiver preenchida.
    * ------------------------------------------------------------------ */
+  // Devolve uma Promise com { seller, whatsapp } (vendedor sorteado no rodízio do servidor), pra
+  // abrir o WhatsApp já na conversa certa. Se der qualquer problema (rede, servidor, webhook
+  // externo sem resposta), devolve null — quem chama cai no número padrão, o WhatsApp nunca falha.
   function postLead(lead) {
     const url = cfg.leadWebhook;
-    if (!url) return;
-    try {
-      if (url.charAt(0) === '/') { // mesma origem: servidor do próprio site (guarda o token do CRM)
-        fetch(url, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) }).catch(() => {});
-      } else { // webhook externo (Make, n8n…): text/plain evita preflight de CORS
-        fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(lead) }).catch(() => {});
-      }
-    } catch (e) { /* o WhatsApp abre de qualquer jeito */ }
+    if (!url) return Promise.resolve(null);
+    if (url.charAt(0) === '/') { // mesma origem: servidor do próprio site (guarda o token do CRM)
+      return fetch(url, { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(lead) })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null);
+    }
+    // webhook externo (Make, n8n…): text/plain evita preflight de CORS, mas não dá resposta legível
+    fetch(url, { method: 'POST', mode: 'no-cors', keepalive: true, headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(lead) }).catch(() => {});
+    return Promise.resolve(null);
   }
 
   function initQuote() {
@@ -272,6 +292,7 @@
       if (!okName || !okPhone || !okPlate || sent) { (!okName ? nameEl : !okPhone ? phoneEl : plateEl).focus(); return; }
       sent = true;
 
+      const eventId = genEventId(); // mesmo id no pixel do navegador e na Conversions API do servidor
       const lead = {
         veiculo: VEHICLE,
         nome: nameEl.value.trim(),
@@ -279,29 +300,51 @@
         placa: plate,
         website: trap ? trap.value : '', // isca anti-robô: pessoas deixam vazio
         pagina: location.origin + location.pathname,
-        data: new Date().toISOString()
+        data: new Date().toISOString(),
+        eventId: eventId
       };
+      const fbp = getCookie('_fbp'); if (fbp) lead.fbp = fbp;
+      const fbc = getFbc(); if (fbc) lead.fbc = fbc;
       if (found) Object.assign(lead, { marca: found.marca, modelo: found.modelo, ano: found.ano, cor: found.cor });
       Object.assign(lead, utm);
 
-      // dados pessoais (nome, telefone, placa) NÃO vão para Meta/GA — só o tipo do lead
-      track('Lead', { lead_type: 'cotacao', placa_consultada: !!found });
-      postLead(lead);
-
       const linhas = ['Nome: ' + lead.nome, 'Placa: ' + plate];
       if (found) linhas.push('Veículo (consulta): ' + [found.marca, found.modelo, found.ano].filter(Boolean).join(' '));
-      const url = waUrl('quote', { append: linhas.join('\n') });
+      const fallbackUrl = waUrl('quote', { append: linhas.join('\n') });
+
+      // abre a aba JÁ, dentro do clique do usuário (senão o navegador bloqueia como pop-up).
+      // o endereço final (WhatsApp do vendedor sorteado no rodízio, com o número padrão como
+      // reserva se demorar ou falhar) é decidido a seguir, sem travar a abertura da aba.
+      // (sem 'noopener' aqui: precisamos guardar a referência pra redirecionar a aba depois)
+      const waTab = window.open('', '_blank');
+      if (waTab) { try { waTab.document.write('<!doctype html><meta charset="utf-8"><title>Abrindo o WhatsApp…</title><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#050505;color:#a5a5ad;font:15px system-ui,sans-serif">Abrindo o WhatsApp…</body>'); } catch (err) { /* ok */ } }
 
       fields.hidden = true;
       success.hidden = false;
-      $('#qSuccessCta').href = url;
+      $('#qSuccessCta').href = fallbackUrl;
       if (window.gsap && !reduce) {
         gsap.fromTo(success, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out' });
         gsap.fromTo($('.fsuccess__ring', success), { scale: .4 }, { scale: 1, duration: .9, ease: 'elastic.out(1,.5)' });
       }
-      // abre o WhatsApp dentro do clique do usuário (não é bloqueado como pop-up)
-      const w = window.open(url, '_blank', 'noopener');
-      if (!w) location.href = url;
+
+      let done = false;
+      const goToWhatsApp = (url) => {
+        if (done) return; done = true;
+        $('#qSuccessCta').href = url;
+        if (waTab && !waTab.closed) {
+          waTab.location.href = url;
+          try { waTab.opener = null; } catch (err) { /* fecha o vínculo assim que não precisamos mais dele */ }
+        } else { const w2 = window.open(url, '_blank', 'noopener'); if (!w2) location.href = url; }
+      };
+      const timer = setTimeout(() => goToWhatsApp(fallbackUrl), 2500); // nunca deixa o cliente esperando o WhatsApp
+      postLead(lead).then((res) => {
+        clearTimeout(timer);
+        goToWhatsApp(res && res.whatsapp ? waUrl('quote', { append: linhas.join('\n'), phone: res.whatsapp }) : fallbackUrl);
+        // o evento de conversão (Meta Pixel) só dispara DEPOIS de confirmar que o servidor aceitou o
+        // lead de verdade — nunca antes, e nunca em duplicado (não é uma nova conversão de anúncio).
+        // Sem timeout aqui: dados pessoais (nome, telefone, placa) NÃO vão para Meta/GA — só o tipo.
+        if (res && res.ok && !res.duplicate) track('Lead', { lead_type: 'cotacao', placa_consultada: !!found }, { eventId: eventId });
+      });
     });
   }
 

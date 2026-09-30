@@ -1,6 +1,7 @@
 'use strict';
 /* Validação, anti-abuso e encaminhamento dos leads da landing page (servidor). */
 const { sendLead, classifyOrigin } = require('./powercrm');
+const metacapi = require('./metacapi');
 const store = require('./store');
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
@@ -43,8 +44,19 @@ function validate(input) {
   if (!PLATE.test(placa)) errors.push('placa');
   const veiculo = input.veiculo === 'carro' ? 'carro' : 'moto';
   const lead = { tipo: 'cotacao', veiculo, nome, telefone, placa };
+  if (input.pagina) lead.pagina = clean(input.pagina, 200);
   UTM_KEYS.forEach((k) => { if (input[k]) lead[k] = clean(input[k], k === 'gclid' || k === 'fbclid' ? 180 : 100); });
   return { errors, lead };
+}
+
+// dados só do Meta Pixel/Conversions API (não são UTM, não vão pro painel nem pro Power CRM):
+// eventId faz o navegador (fbq) e o servidor (CAPI) reportarem o MESMO evento sem contar em dobro.
+function metaTrackingOf(input) {
+  const out = {};
+  if (input.eventId) out.eventId = clean(input.eventId, 100);
+  if (input.fbp) out.fbp = clean(input.fbp, 100);
+  if (input.fbc) out.fbc = clean(input.fbc, 100);
+  return out;
 }
 
 async function processLead(input, meta) {
@@ -63,11 +75,19 @@ async function processLead(input, meta) {
   if (last && Date.now() - last < DEDUPE_MS) { store.recordStatus(id, 'duplicado'); return { status: 200, body: { ok: true, duplicate: true } }; }
   recent.set(key, Date.now());
 
+  // Meta Conversions API: só dispara AGORA que o lead foi de fato aceito (validado, não-duplicado) —
+  // nunca antes disso. Não trava a resposta (falha de tracking não pode atrasar/derrubar o lead).
+  const mt = metaTrackingOf(input);
+  metacapi.sendLeadEvent(lead, Object.assign({ ip: meta.ip, userAgent: meta.userAgent }, mt)).catch(() => {});
+
+  let contact = null;
   try {
     const result = await sendLead(lead, { onFinal: (finalStatus, seller) => store.recordStatus(id, finalStatus, seller) });
     if (result && result.state) store.recordStatus(id, result.state, result.seller);
+    contact = result;
   } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
-  return { status: 200, body: { ok: true } }; // o navegador nunca vê detalhes do CRM
+  // o navegador só vê nome + WhatsApp do vendedor sorteado (pra abrir a conversa certa) — nada mais do CRM
+  return { status: 200, body: { ok: true, seller: (contact && contact.seller) || null, whatsapp: (contact && contact.whatsapp) || null } };
 }
 
 module.exports = { processLead, validate, normPhone };

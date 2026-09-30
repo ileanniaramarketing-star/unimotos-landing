@@ -131,10 +131,13 @@ async function post(cfg, body) {
   } finally { clearTimeout(timer); }
 }
 
-// Envia o lead (com até 3 novas tentativas em segundo plano se o CRM falhar). Retorna o estado imediato.
-// opts.onFinal(status), se passado, é chamado quando o resultado muda DEPOIS do retorno síncrono —
-// ou seja, só quando uma tentativa em segundo plano termina (sucesso tardio ou falha definitiva).
-// É o que alimenta o painel de leads (/painel), para o status não ficar "pendente" para sempre.
+// Decide o vendedor (rodízio, local e instantâneo) e devolve JÁ o resultado, SEM esperar o Power
+// CRM responder — é o que permite ao navegador abrir o WhatsApp do vendedor certo sem o cliente
+// ficar esperando a chamada de rede pro CRM (que pode demorar ou até falhar/repetir).
+// O envio de verdade ao CRM (com até 3 novas tentativas em segundo plano) roda por conta própria.
+// opts.onFinal(status, seller) é chamado sempre que o estado do envio muda DEPOIS do retorno
+// síncrono ('sent', 'retrying' ao tentar de novo, ou 'failed' quando esgotam as tentativas) —
+// é o que alimenta o painel de leads (/painel), para o status não ficar "pendente" para sempre.
 async function sendLead(lead, opts) {
   opts = opts || {};
   const veiculo = VEHICLES.includes(lead.veiculo) ? lead.veiculo : 'moto';
@@ -147,27 +150,26 @@ async function sendLead(lead, opts) {
   const r = resolve(cfg, veiculo);
   const seller = pickSeller(r.sellers, veiculo);
   const body = buildBody(cfg, Object.assign({}, lead, { veiculo }), seller, r);
+  const contact = { seller: seller.name, whatsapp: seller.whatsapp || null };
 
   if (st.state === 'dry-run') {
     log('DRY-RUN (nada foi enviado) · ' + veiculo + ' · consultor:', seller.name, '· corpo:', body);
-    return { state: 'dry-run', seller: seller.name };
+    return Object.assign({ state: 'dry-run' }, contact);
   }
   const delays = [0, 5000, 30000, 120000];
   const attempt = async (i) => {
     try {
       const code = await post(cfg, body);
       log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', code);
-      if (i > 0 && opts.onFinal) opts.onFinal('sent', seller.name);
-      return true;
+      if (opts.onFinal) opts.onFinal('sent', seller.name);
     } catch (e) {
       log('falha (tentativa ' + (i + 1) + '/' + delays.length + '):', e.name === 'AbortError' ? 'timeout' : e.message);
-      if (i + 1 < delays.length) setTimeout(() => attempt(i + 1), delays[i + 1]);
+      if (i + 1 < delays.length) { if (opts.onFinal) opts.onFinal('retrying', seller.name); setTimeout(() => attempt(i + 1), delays[i + 1]); }
       else if (opts.onFinal) opts.onFinal('failed', seller.name);
-      return false;
     }
   };
-  const ok = await attempt(0);
-  return { state: ok ? 'sent' : 'retrying', seller: seller.name };
+  attempt(0); // propositalmente não esperado (ver comentário acima)
+  return Object.assign({ state: 'pendente' }, contact);
 }
 
 module.exports = { sendLead, status, maskPhone, originFor, classifyOrigin };
