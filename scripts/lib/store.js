@@ -41,7 +41,7 @@ function fromRow(r) {
     utm_source: r.utm_source || undefined, utm_medium: r.utm_medium || undefined, utm_campaign: r.utm_campaign || undefined,
     utm_content: r.utm_content || undefined, utm_term: r.utm_term || undefined, gclid: r.gclid || undefined, fbclid: r.fbclid || undefined,
     pagina: r.pagina || undefined, crmOrigin: r.crm_origem || undefined, seller: r.vendedor || null, status: r.status,
-    statusTs: r.status_ts || undefined
+    statusTs: r.status_ts || undefined, quotationCode: r.crm_quotation_code || undefined, negotiationCode: r.crm_negotiation_code || undefined
   };
 }
 
@@ -59,11 +59,15 @@ async function recordCreated(lead) {
   return rows[0] && rows[0].id;
 }
 
-// evento "status": o resultado do envio ao CRM (imediato ou, para retries, mais tarde)
-async function recordStatus(id, status, seller) {
+// evento "status": o resultado do envio ao CRM (imediato ou, para retries, mais tarde).
+// extra.quotationCode/negotiationCode (só vêm quando status='sent'): código da cotação/negociação
+// no Power CRM, guardado pra depois dar pra conferir lá se aquele lead foi vendido ou não.
+async function recordStatus(id, status, seller, extra) {
   if (!id) return;
   const body = { status, status_ts: new Date().toISOString() };
   if (seller) body.vendedor = seller;
+  if (extra && extra.quotationCode) body.crm_quotation_code = extra.quotationCode;
+  if (extra && extra.negotiationCode) body.crm_negotiation_code = extra.negotiationCode;
   await sb('/' + TABLE + '?id=eq.' + encodeURIComponent(id), { method: 'PATCH', body: JSON.stringify(body) });
 }
 

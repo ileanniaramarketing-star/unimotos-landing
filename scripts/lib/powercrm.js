@@ -125,8 +125,10 @@ async function post(cfg, body) {
       body: JSON.stringify(body),
       signal: ctrl.signal
     });
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error('Power CRM respondeu HTTP ' + res.status);
-    return res.status;
+    // devolve os códigos da cotação/negociação (pra guardar no painel e depois conferir se foi vendido)
+    return { status: res.status, quotationCode: json.quotationCode || null, negotiationCode: json.negotiationCode || null };
   } finally { clearTimeout(timer); }
 }
 
@@ -158,17 +160,26 @@ async function sendLead(lead, opts) {
   const delays = [0, 5000, 30000, 120000];
   const attempt = async (i) => {
     try {
-      const code = await post(cfg, body);
-      log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', code);
-      if (opts.onFinal) opts.onFinal('sent', seller.name);
+      const resp = await post(cfg, body);
+      log('enviado · ' + veiculo + ' · consultor:', seller.name, '· HTTP', resp.status, '· cotação:', resp.quotationCode);
+      if (i > 0 && opts.onFinal) opts.onFinal('sent', seller.name, { quotationCode: resp.quotationCode, negotiationCode: resp.negotiationCode });
+      return { ok: true, resp };
     } catch (e) {
       log('falha (tentativa ' + (i + 1) + '/' + delays.length + '):', e.name === 'AbortError' ? 'timeout' : e.message);
-      if (i + 1 < delays.length) { if (opts.onFinal) opts.onFinal('retrying', seller.name); setTimeout(() => attempt(i + 1), delays[i + 1]); }
+      if (i + 1 < delays.length) { if (i > 0 && opts.onFinal) opts.onFinal('retrying', seller.name); setTimeout(() => attempt(i + 1), delays[i + 1]); }
       else if (opts.onFinal) opts.onFinal('failed', seller.name);
+      return { ok: false };
     }
   };
-  attempt(0); // propositalmente não esperado (ver comentário acima)
-  return Object.assign({ state: 'pendente' }, contact);
+  // espera SÓ a 1ª tentativa (uma chamada de rede) antes de responder: em hospedagens que podem
+  // encerrar o processo logo após a resposta (ex.: serverless), um envio deixado "em segundo plano"
+  // corre risco de nunca terminar, e o lead fica pendente pra sempre sem erro nenhum no log — foi o
+  // que aconteceu de verdade em produção (2026-09-30). O vendedor já foi decidido antes (rápido, sem
+  // rede), então o WhatsApp continua abrindo rápido — só a confirmação do CRM espera essa 1ª chamada.
+  // Se ela falhar, as tentativas seguintes continuam em segundo plano (onFinal cobre esse caso).
+  const first = await attempt(0);
+  if (first.ok) return Object.assign({ state: 'sent', quotationCode: first.resp.quotationCode, negotiationCode: first.resp.negotiationCode }, contact);
+  return Object.assign({ state: 'retrying' }, contact);
 }
 
 module.exports = { sendLead, status, maskPhone, originFor, classifyOrigin };

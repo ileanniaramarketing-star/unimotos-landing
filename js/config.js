@@ -40,7 +40,7 @@ window.UNI_CONFIG = {
   plateLookupUrl: "",
 
   /* --- Rastreamento (deixe vazio para não carregar) --------------------- */
-  gtmId: "",          // ex.: "GTM-XXXXXXX"
+  gtmId: "GTM-NRQT599Q",
   metaPixelId: "2410461069470382",
   ga4Id: "",          // ex.: "G-XXXXXXXXXX"
 

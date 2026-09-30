@@ -52,6 +52,7 @@ pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a co
 - **Rodízio de vendedor**: sorteia quem tem **menos leads daquele veículo até agora** (lido direto do Supabase), com
   empate resolvido aleatoriamente — nunca fica 3×0 pra um lado, e funciona certinho mesmo logo depois de um reinício
   (diferente de um contador simples em arquivo, que reinicia do zero a cada deploy).
+- **Código da cotação/negociação do Power CRM**: quando o envio dá certo, o código que o Power CRM devolve (`quotationCode`/`negotiationCode`) fica guardado junto do lead no Supabase — dá pra usar depois pra conferir lá se aquele lead foi vendido.
 - **Gerenciar vendedores** (adicionar/remover do rodízio) continua sendo em `config/powercrm.json`, não tem tela pra isso ainda.
 - Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
   cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
@@ -77,6 +78,12 @@ navegador do cliente.
   **e** `POST /api/pageview` (mesmo eventId) pro servidor mandar o espelho pela Conversions API —
   bem mais permissivo que o `/api/lead` (não é uma conversão, é só navegação), sem exigir nem
   aceitar nenhum dado pessoal.
+- **Qualidade de correspondência (EMQ)**: o evento "Lead" manda telefone **e nome/sobrenome**
+  (sempre em hash SHA-256) — quanto mais sinal, melhor a nota do Meta.
+- **Testar sem afetar a campanha**: `META_TEST_EVENT_CODE` no cofre (opcional) — com ele presente,
+  os eventos aparecem na aba **Testar eventos** do Gerenciador de Eventos em tempo real, mas **não
+  contam pra otimização de anúncio**. ⚠️ Nunca deixar essa variável nas variáveis de ambiente de
+  produção (só usar localmente, durante um teste pontual).
 
 ## Cofre de segredos (local)
 

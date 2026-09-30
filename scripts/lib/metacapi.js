@@ -35,9 +35,20 @@ function hashPhone(e164) {
   return digits ? sha256(digits) : undefined;
 }
 
+// "João da Silva" -> { fn: hash("joão"), ln: hash("da silva") } — nome é um dos sinais mais fortes
+// de correspondência do Meta (Event Match Quality); sem ele a nota de qualidade fica baixa.
+function hashName(nomeCompleto) {
+  const partes = String(nomeCompleto || '').trim().split(/\s+/).filter(Boolean);
+  if (!partes.length) return {};
+  const fn = sha256(partes[0]);
+  const ln = partes.length > 1 ? sha256(partes.slice(1).join(' ')) : undefined;
+  return { fn, ln };
+}
+
 function buildUserData(meta) {
   const userData = {};
   if (meta.phone) { const h = hashPhone(meta.phone); if (h) userData.ph = [h]; }
+  if (meta.nome) { const { fn, ln } = hashName(meta.nome); if (fn) userData.fn = [fn]; if (ln) userData.ln = [ln]; }
   if (meta.fbp) userData.fbp = meta.fbp;
   if (meta.fbc) userData.fbc = meta.fbc;
   if (meta.ip) userData.client_ip_address = meta.ip;
@@ -55,16 +66,22 @@ async function postEvent(eventName, event) {
   const url = (cfg.baseUrl || 'https://graph.facebook.com') + '/' + (cfg.apiVersion || 'v21.0') + '/' + cfg.pixelId + '/events?access_token=' + encodeURIComponent(token());
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
+  // META_TEST_EVENT_CODE (cofre, temporário — só pra ver o evento chegar na aba "Testar eventos" do
+  // Gerenciador de Eventos). ⚠️ Tirar do cofre antes da campanha valer pra valer: com esse código
+  // presente, o Meta NÃO usa o evento pra otimização de anúncios, só mostra na aba de teste.
+  const testCode = process.env.META_TEST_EVENT_CODE || '';
+  const payload = { data: [event] };
+  if (testCode) payload.test_event_code = testCode;
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ data: [event] }),
+      body: JSON.stringify(payload),
       signal: ctrl.signal
     });
     const body = await res.text();
     if (!res.ok) log('Meta respondeu HTTP', res.status, '·', body);
-    else log('evento ' + eventName + ' enviado · eventId:', event.event_id);
+    else log('evento ' + eventName + ' enviado · eventId:', event.event_id, testCode ? '· MODO TESTE (test_event_code ativo — não conta pra otimização de anúncio)' : '');
   } catch (e) {
     log('falha ao enviar evento ' + eventName + ':', e.name === 'AbortError' ? 'timeout' : e.message);
   } finally { clearTimeout(timer); }
@@ -80,7 +97,7 @@ async function sendLeadEvent(lead, meta) {
     event_id: meta.eventId || undefined,        // mesmo id do pixel do navegador -> deduplicação
     event_source_url: lead.pagina || undefined,
     action_source: 'website',
-    user_data: buildUserData(Object.assign({ phone: lead.telefone }, meta)),
+    user_data: buildUserData(Object.assign({ phone: lead.telefone, nome: lead.nome }, meta)),
     custom_data: { content_name: lead.veiculo === 'carro' ? 'Carro' : 'Moto' }
   });
 }

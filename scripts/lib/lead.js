@@ -86,8 +86,8 @@ async function processLead(input, meta) {
 
   let contact = null;
   try {
-    const result = await sendLead(lead, { onFinal: (finalStatus, seller) => { if (id) store.recordStatus(id, finalStatus, seller).catch(() => {}); } });
-    if (result && result.state && id) store.recordStatus(id, result.state, result.seller).catch(() => {});
+    const result = await sendLead(lead, { onFinal: (finalStatus, seller, extra) => { if (id) store.recordStatus(id, finalStatus, seller, extra).catch(() => {}); } });
+    if (result && result.state && id) store.recordStatus(id, result.state, result.seller, { quotationCode: result.quotationCode, negotiationCode: result.negotiationCode }).catch(() => {});
     contact = result;
   } catch (e) { console.error('[lead] erro inesperado ao enviar ao CRM:', e.message); }
   // o navegador só vê nome + WhatsApp do vendedor sorteado (pra abrir a conversa certa) — nada mais do CRM
