@@ -41,6 +41,7 @@ function fromRow(r) {
     utm_source: r.utm_source || undefined, utm_medium: r.utm_medium || undefined, utm_campaign: r.utm_campaign || undefined,
     utm_content: r.utm_content || undefined, utm_term: r.utm_term || undefined, utm_id: r.utm_id || undefined, act_id: r.act_id || undefined,
     placement: r.placement || undefined, keyword: r.keyword || undefined, gclid: r.gclid || undefined, fbclid: r.fbclid || undefined,
+    origem_form: r.origem_form || 'site', cta: r.cta || undefined,
     pagina: r.pagina || undefined, crmOrigin: r.crm_origem || undefined, seller: r.vendedor || null, status: r.status,
     statusTs: r.status_ts || undefined, quotationCode: r.crm_quotation_code || undefined, negotiationCode: r.crm_negotiation_code || undefined
   };
@@ -57,6 +58,7 @@ async function recordCreated(lead, seller, statusValue) {
     utm_source: lead.utm_source || null, utm_medium: lead.utm_medium || null, utm_campaign: lead.utm_campaign || null,
     utm_content: lead.utm_content || null, utm_term: lead.utm_term || null, utm_id: lead.utm_id || null, act_id: lead.act_id || null,
     placement: lead.placement || null, keyword: lead.keyword || null, gclid: lead.gclid || null, fbclid: lead.fbclid || null,
+    origem_form: lead.origem_form || 'site', cta: lead.cta || null,
     pagina: lead.pagina || null, crm_origem: lead.crmOrigin || null, status: statusValue || 'pendente'
   };
   if (seller) body.vendedor = seller;
@@ -110,13 +112,13 @@ function tally(rows, key) {
 // aba "Relatórios": soma geral e divisões por veículo, plataforma, campanha, criativo, origem (CRM), vendedor e status
 async function aggregate(opts) {
   opts = opts || {};
-  const params = ['select=veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,crm_origem,vendedor,status', 'limit=20000'];
+  const params = ['select=veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status', 'limit=20000'];
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) params.push('ts=gte.' + encodeURIComponent(from));
   if (to) params.push('ts=lte.' + encodeURIComponent(to));
   const res = await sb('/' + TABLE + '?' + params.join('&'));
   const raw = await res.json();
-  const rows = raw.map((r) => ({ veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status }));
+  const rows = raw.map((r) => ({ veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword, origem_form: r.origem_form === 'whatsapp' ? 'Pop-up do WhatsApp' : 'Formulário do site', cta: r.cta, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status }));
   const sent = rows.filter((r) => r.status === 'sent' || r.status === 'dry-run');
   return {
     total: rows.length,
@@ -129,6 +131,8 @@ async function aggregate(opts) {
     porConta: tally(rows, 'act_id'),
     porPosicionamento: tally(rows, 'placement'),
     porPalavraChave: tally(rows, 'keyword'),
+    porFormulario: tally(rows, 'origem_form'),
+    porBotao: tally(rows.filter((r) => r.cta), 'cta'),
     porOrigemCrm: tally(sent, 'crmOrigin'),
     porVendedor: tally(rows.filter((r) => r.seller), 'seller'),
     porStatus: tally(rows, 'status')

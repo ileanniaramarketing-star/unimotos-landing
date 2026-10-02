@@ -757,3 +757,20 @@ body::after {
 @media (max-width: 560px) { .hero__formwrap { margin-top: 24px; } }
 /* celulares muito estreitos: título e preço um pouco menores para o cartão não encostar no "Cote seu carro" */
 @media (max-width: 350px) { .aform__title { font-size: 1.02rem; } .price b { font-size: 1.45rem; } }
+
+/* ---------- pop-up do WhatsApp (nome, telefone, placa) ---------- */
+body.is-modal { overflow: hidden; }
+.wamodal { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.wamodal[hidden] { display: none; }
+.wamodal__backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .74); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.wamodal__box { position: relative; width: min(440px, 100%); max-height: calc(100svh - 32px); overflow-y: auto; overscroll-behavior: contain; padding: clamp(22px, 5vw, 32px); border-radius: 22px; background: linear-gradient(180deg, #17171a, #0d0d0f); border: 1px solid var(--line-2); box-shadow: 0 40px 90px -24px rgba(0, 0, 0, .9), 0 0 60px -20px rgba(227, 27, 35, .35); animation: wamodalIn .28s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes wamodalIn { from { opacity: 0; transform: translateY(18px) scale(.98); } to { opacity: 1; transform: none; } }
+.wamodal__x { position: absolute; top: 10px; right: 12px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .06); color: #fff; font-size: 1.6rem; line-height: 1; cursor: pointer; }
+.wamodal__x:hover { background: rgba(255, 255, 255, .14); }
+.wamodal__title { font-family: var(--f-head); font-weight: 800; font-size: 1.4rem; line-height: 1.15; letter-spacing: -.02em; padding-right: 34px; }
+.wamodal__sub { margin: 8px 0 20px; color: var(--muted); font-size: .92rem; }
+.wamodal__go { width: 100%; margin-top: 22px; gap: .6rem; }
+.wamodal .form__legal { margin-top: 14px; }
+.wamodal .fsuccess { padding-top: 6px; }
+@media (max-width: 560px) { .wamodal { align-items: flex-end; padding: 0; } .wamodal__box { width: 100%; border-radius: 22px 22px 0 0; max-height: 94svh; } }
+@media (prefers-reduced-motion: reduce) { .wamodal__box { animation: none; } }

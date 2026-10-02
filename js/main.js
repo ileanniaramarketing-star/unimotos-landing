@@ -19,6 +19,12 @@
     return v ? '(' + v : '';
   };
   const phoneValid = (raw) => { const d = digits(raw); return (d.length === 10 || d.length === 11) && d[0] !== '0'; };
+  const normPlate = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
+  // antiga: ABC1234 · Mercosul: ABC1D23
+  const plateOk = (p) => /^[A-Z]{3}[0-9]{4}$/.test(p) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(p);
+  // WhatsApp do vendedor sorteado, depois que um lead foi aceito (formulário OU pop-up): os próximos
+  // cliques em "WhatsApp" vão direto pra ele, sem pedir os dados de novo (e sem criar lead duplicado).
+  let lastWaUrl = '';
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const hasGsap = !!(window.gsap && window.ScrollTrigger);
@@ -241,9 +247,6 @@
     let sent = false;
     let seq = 0;
 
-    const normPlate = (v) => String(v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 7);
-    // antiga: ABC1234 · Mercosul: ABC1D23
-    const plateOk = (p) => /^[A-Z]{3}[0-9]{4}$/.test(p) || /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/.test(p);
     const setErr = (el, on) => el.closest('.field').classList.toggle('has-err', on);
     const clip = (v) => String(v == null ? '' : v).trim().slice(0, 60);
 
@@ -306,58 +309,141 @@
       if (!okName || !okPhone || !okPlate || sent) { (!okName ? nameEl : !okPhone ? phoneEl : plateEl).focus(); return; }
       sent = true;
 
-      const eventId = genEventId(); // mesmo id no pixel do navegador e na Conversions API do servidor
-      const lead = {
-        veiculo: VEHICLE,
-        nome: nameEl.value.trim(),
-        telefone: '55' + digits(phoneEl.value),
-        placa: plate,
-        website: trap ? trap.value : '', // isca anti-robô: pessoas deixam vazio
-        pagina: location.origin + location.pathname,
-        data: new Date().toISOString(),
-        eventId: eventId
-      };
-      const fbp = getCookie('_fbp'); if (fbp) lead.fbp = fbp;
-      const fbc = getFbc(); if (fbc) lead.fbc = fbc;
-      if (found) Object.assign(lead, { marca: found.marca, modelo: found.modelo, ano: found.ano, cor: found.cor });
-      Object.assign(lead, utm);
+      dispatchLead({
+        nome: nameEl.value.trim(), telefone: phoneEl.value, placa: plate, trap: trap ? trap.value : '',
+        found, origem: 'site', cta: 'form',
+        onOpen: (fallbackUrl) => { // formulário: troca os campos pela mensagem de sucesso
+          fields.hidden = true;
+          success.hidden = false;
+          $('#qSuccessCta').href = fallbackUrl;
+          if (window.gsap && !reduce) {
+            gsap.fromTo(success, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out' });
+            gsap.fromTo($('.fsuccess__ring', success), { scale: .4 }, { scale: 1, duration: .9, ease: 'elastic.out(1,.5)' });
+          }
+        },
+        onUrl: (url) => { $('#qSuccessCta').href = url; }
+      });
+    });
+  }
 
-      const linhas = ['Nome: ' + lead.nome, 'Placa: ' + plate];
-      if (found) linhas.push('Veículo (consulta): ' + [found.marca, found.modelo, found.ano].filter(Boolean).join(' '));
-      const fallbackUrl = waUrl('quote', { append: linhas.join('\n') });
+  /* ------------------------------------------------------------------ *
+   * ENVIO DO LEAD + ABERTURA DO WHATSAPP — usado pelo formulário do site e pelo pop-up do WhatsApp.
+   * Mesma lógica nos dois: /api/lead -> Supabase -> rodízio -> Power CRM, e o WhatsApp abre no
+   * vendedor sorteado. ctx.origem ('site'|'whatsapp') e ctx.cta ficam gravados no lead pra relatório.
+   * Precisa ser chamado DENTRO do clique/submit do usuário (a aba do WhatsApp abre aqui, síncrono).
+   * ------------------------------------------------------------------ */
+  function dispatchLead(ctx) {
+    const found = ctx.found || null;
+    const eventId = genEventId(); // mesmo id no pixel do navegador e na Conversions API do servidor
+    const lead = {
+      veiculo: VEHICLE,
+      nome: ctx.nome,
+      telefone: '55' + digits(ctx.telefone),
+      placa: ctx.placa,
+      website: ctx.trap || '', // isca anti-robô: pessoas deixam vazio
+      pagina: location.origin + location.pathname,
+      data: new Date().toISOString(),
+      eventId: eventId,
+      origem_form: ctx.origem || 'site',
+      cta: ctx.cta || ''
+    };
+    const fbp = getCookie('_fbp'); if (fbp) lead.fbp = fbp;
+    const fbc = getFbc(); if (fbc) lead.fbc = fbc;
+    if (found) Object.assign(lead, { marca: found.marca, modelo: found.modelo, ano: found.ano, cor: found.cor });
+    Object.assign(lead, utm);
 
-      // abre a aba JÁ, dentro do clique do usuário (senão o navegador bloqueia como pop-up).
-      // o endereço final (WhatsApp do vendedor sorteado no rodízio, com o número padrão como
-      // reserva se demorar ou falhar) é decidido a seguir, sem travar a abertura da aba.
-      // (sem 'noopener' aqui: precisamos guardar a referência pra redirecionar a aba depois)
-      const waTab = window.open('', '_blank');
-      if (waTab) { try { waTab.document.write('<!doctype html><meta charset="utf-8"><title>Abrindo o WhatsApp…</title><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#050505;color:#a5a5ad;font:15px system-ui,sans-serif">Abrindo o WhatsApp…</body>'); } catch (err) { /* ok */ } }
+    const linhas = ['Nome: ' + lead.nome, 'Placa: ' + lead.placa];
+    if (found) linhas.push('Veículo (consulta): ' + [found.marca, found.modelo, found.ano].filter(Boolean).join(' '));
+    const fallbackUrl = waUrl('quote', { append: linhas.join('\n') });
 
-      fields.hidden = true;
-      success.hidden = false;
-      $('#qSuccessCta').href = fallbackUrl;
-      if (window.gsap && !reduce) {
-        gsap.fromTo(success, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: .7, ease: 'power3.out' });
-        gsap.fromTo($('.fsuccess__ring', success), { scale: .4 }, { scale: 1, duration: .9, ease: 'elastic.out(1,.5)' });
+    // abre a aba JÁ, dentro do clique do usuário (senão o navegador bloqueia como pop-up).
+    // o endereço final (WhatsApp do vendedor sorteado no rodízio, com o número padrão como
+    // reserva se demorar ou falhar) é decidido a seguir, sem travar a abertura da aba.
+    // (sem 'noopener' aqui: precisamos guardar a referência pra redirecionar a aba depois)
+    const waTab = window.open('', '_blank');
+    if (waTab) { try { waTab.document.write('<!doctype html><meta charset="utf-8"><title>Abrindo o WhatsApp…</title><body style="margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#050505;color:#a5a5ad;font:15px system-ui,sans-serif">Abrindo o WhatsApp…</body>'); } catch (err) { /* ok */ } }
+
+    if (ctx.onOpen) ctx.onOpen(fallbackUrl);
+
+    let done = false;
+    const goToWhatsApp = (url) => {
+      if (done) return; done = true;
+      if (ctx.onUrl) ctx.onUrl(url);
+      if (waTab && !waTab.closed) {
+        waTab.location.href = url;
+        try { waTab.opener = null; } catch (err) { /* fecha o vínculo assim que não precisamos mais dele */ }
+      } else { const w2 = window.open(url, '_blank', 'noopener'); if (!w2) location.href = url; }
+    };
+    const timer = setTimeout(() => goToWhatsApp(fallbackUrl), 2500); // nunca deixa o cliente esperando o WhatsApp
+    postLead(lead).then((res) => {
+      clearTimeout(timer);
+      const sellerUrl = res && res.whatsapp ? waUrl('quote', { append: linhas.join('\n'), phone: res.whatsapp }) : '';
+      if (sellerUrl && res.ok) lastWaUrl = sellerUrl; // próximos cliques em "WhatsApp" vão direto pra esse vendedor
+      goToWhatsApp(sellerUrl || fallbackUrl);
+      // o evento de conversão (Meta Pixel) só dispara DEPOIS de confirmar que o servidor aceitou o
+      // lead de verdade — nunca antes, e nunca em duplicado (não é uma nova conversão de anúncio).
+      // Sem timeout aqui: dados pessoais (nome, telefone, placa) NÃO vão para Meta/GA — só o tipo.
+      if (res && res.ok && !res.duplicate) track('Lead', { lead_type: ctx.origem === 'whatsapp' ? 'whatsapp_popup' : 'cotacao', cta: ctx.cta || '', placa_consultada: !!found }, { eventId: eventId });
+    });
+  }
+
+  /* ------------------------------------------------------------------ *
+   * POP-UP DO WHATSAPP: qualquer botão [data-wa] abre um formulário (nome, telefone, placa) que segue
+   * a mesma lógica do formulário do site; só depois a pessoa é levada ao WhatsApp do vendedor.
+   * ------------------------------------------------------------------ */
+  function initWaModal() {
+    const modal = $('#waModal'); if (!modal) return; // sem o HTML do pop-up: os botões seguem abrindo o WhatsApp direto
+    const form = $('#waForm'), nameEl = $('#wName'), phoneEl = $('#wPhone'), plateEl = $('#wPlate'), trap = $('#wWebsite');
+    const fields = $('#waFields'), success = $('#waSuccess'), cta = $('#waSuccessCta');
+    const setErr = (el, on) => el.closest('.field').classList.toggle('has-err', on);
+    let opener = null, currentCta = 'wa', busy = false;
+
+    const focusables = () => $$('button, input, a[href]', modal).filter((el) => !el.closest('[hidden]') && !el.closest('.hp') && el.tabIndex !== -1);
+    function open(from, ctaName) {
+      opener = from || null; currentCta = ctaName || 'wa';
+      fields.hidden = false; success.hidden = true; busy = false;
+      modal.hidden = false; document.body.classList.add('is-modal');
+      setTimeout(() => nameEl.focus(), 30); // (o evento Contact do clique já é disparado em applyConfig)
+    }
+    function close() {
+      modal.hidden = true; document.body.classList.remove('is-modal');
+      if (opener && opener.focus) { try { opener.focus(); } catch (e) { /* ok */ } }
+    }
+
+    // todos os botões de WhatsApp da página
+    $$('[data-wa]').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (lastWaUrl) { window.open(lastWaUrl, '_blank', 'noopener'); return; } // já mandou os dados: vai direto
+      open(a, a.getAttribute('data-cta') || 'wa');
+    }));
+    $$('[data-wa-close]', modal).forEach((el) => el.addEventListener('click', close));
+    document.addEventListener('keydown', (e) => {
+      if (modal.hidden) return;
+      if (e.key === 'Escape') { close(); return; }
+      if (e.key === 'Tab') { // mantém o foco dentro do pop-up
+        const f = focusables(); if (!f.length) return;
+        const first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
+    });
 
-      let done = false;
-      const goToWhatsApp = (url) => {
-        if (done) return; done = true;
-        $('#qSuccessCta').href = url;
-        if (waTab && !waTab.closed) {
-          waTab.location.href = url;
-          try { waTab.opener = null; } catch (err) { /* fecha o vínculo assim que não precisamos mais dele */ }
-        } else { const w2 = window.open(url, '_blank', 'noopener'); if (!w2) location.href = url; }
-      };
-      const timer = setTimeout(() => goToWhatsApp(fallbackUrl), 2500); // nunca deixa o cliente esperando o WhatsApp
-      postLead(lead).then((res) => {
-        clearTimeout(timer);
-        goToWhatsApp(res && res.whatsapp ? waUrl('quote', { append: linhas.join('\n'), phone: res.whatsapp }) : fallbackUrl);
-        // o evento de conversão (Meta Pixel) só dispara DEPOIS de confirmar que o servidor aceitou o
-        // lead de verdade — nunca antes, e nunca em duplicado (não é uma nova conversão de anúncio).
-        // Sem timeout aqui: dados pessoais (nome, telefone, placa) NÃO vão para Meta/GA — só o tipo.
-        if (res && res.ok && !res.duplicate) track('Lead', { lead_type: 'cotacao', placa_consultada: !!found }, { eventId: eventId });
+    plateEl.addEventListener('input', () => { plateEl.value = normPlate(plateEl.value); setErr(plateEl, false); });
+    phoneEl.addEventListener('input', () => { phoneEl.value = formatPhone(phoneEl.value); setErr(phoneEl, false); });
+    nameEl.addEventListener('input', () => setErr(nameEl, false));
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const plate = normPlate(plateEl.value);
+      const okName = nameEl.value.trim().length >= 2, okPhone = phoneValid(phoneEl.value), okPlate = plateOk(plate);
+      setErr(nameEl, !okName); setErr(phoneEl, !okPhone); setErr(plateEl, !okPlate);
+      if (!okName || !okPhone || !okPlate || busy) { (!okName ? nameEl : !okPhone ? phoneEl : plateEl).focus(); return; }
+      busy = true;
+      dispatchLead({
+        nome: nameEl.value.trim(), telefone: phoneEl.value, placa: plate, trap: trap ? trap.value : '',
+        origem: 'whatsapp', cta: currentCta,
+        onOpen: (fallbackUrl) => { fields.hidden = true; success.hidden = false; cta.href = fallbackUrl; },
+        onUrl: (url) => { cta.href = url; setTimeout(close, 2500); }
       });
     });
   }
@@ -667,6 +753,7 @@
     loadTracking();
     applyConfig();
     initQuote();
+    initWaModal();
     initFaq();
     initChrome();
 

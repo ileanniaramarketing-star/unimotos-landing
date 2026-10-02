@@ -45,7 +45,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
 
   <script>document.documentElement.className = 'js';</script>
-  <link rel="stylesheet" href="/css/style.css?v=44ef2573">
+  <link rel="stylesheet" href="/css/style.css?v=477645ce">
 </head>
 
 <body data-vehicle="moto">
@@ -577,10 +577,62 @@
     </defs>
   </svg>
 
+  <!-- Pop-up do WhatsApp: qualquer botão [data-wa] abre isto; segue a mesma lógica do formulário do site -->
+  <div class="wamodal" id="waModal" data-lenis-prevent hidden>
+    <div class="wamodal__backdrop" data-wa-close></div>
+    <div class="wamodal__box" role="dialog" aria-modal="true" aria-labelledby="waModalTitle">
+      <button type="button" class="wamodal__x" data-wa-close aria-label="Fechar">&times;</button>
+      <form id="waForm" novalidate>
+        <div id="waFields">
+          <h3 class="wamodal__title" id="waModalTitle">Falar com um consultor no WhatsApp</h3>
+          <p class="wamodal__sub">Preencha rapidinho para já te atendermos com a cotação.</p>
+
+          <div class="field">
+            <label for="wName">Seu nome</label>
+            <input id="wName" name="nome" type="text" autocomplete="name" placeholder="Como podemos te chamar?" required>
+            <small class="field__err">Digite seu nome.</small>
+          </div>
+          <div class="field">
+            <label for="wPhone">WhatsApp</label>
+            <input id="wPhone" name="telefone" type="tel" inputmode="numeric" autocomplete="tel-national" placeholder="(00) 00000-0000" required>
+            <small class="field__err">Digite um WhatsApp com DDD.</small>
+          </div>
+          <div class="field">
+            <label for="wPlate">Placa da moto</label>
+            <div class="plate">
+              <div class="plate__top"><span>BRASIL</span><i aria-hidden="true"></i></div>
+              <input id="wPlate" name="placa" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="ABC1D23" required>
+            </div>
+            <small class="field__err">Digite uma placa válida (ex.: ABC1D23 ou ABC-1234).</small>
+          </div>
+
+          <!-- isca anti-robô: pessoas não veem nem preenchem -->
+          <div class="hp" aria-hidden="true"><label>Não preencha este campo <input type="text" name="website" id="wWebsite" tabindex="-1" autocomplete="off"></label></div>
+
+          <button type="submit" class="btn btn--primary btn--lg wamodal__go" id="waSubmit">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-wa"/></svg>
+            <span>Conversar no WhatsApp</span>
+          </button>
+          <p class="form__legal">Ao continuar, você concorda que a Unimotos use seu nome, telefone e a placa para fazer a cotação e falar com você pelo WhatsApp.</p>
+        </div>
+
+        <div class="fsuccess" id="waSuccess" hidden>
+          <div class="fsuccess__ring"><svg viewBox="0 0 24 24" width="24" height="24"><use href="#i-check"/></svg></div>
+          <h3>Abrindo o WhatsApp…</h3>
+          <p>Se não abrir sozinho, toque no botão abaixo.</p>
+          <a class="btn btn--primary" id="waSuccessCta" target="_blank" rel="noopener" href="#">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true" width="24" height="24"><use href="#i-wa"/></svg>
+            <span>Abrir WhatsApp</span>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="/assets/vendor/gsap.min.js?v=2d26f4c0" defer></script>
   <script src="/assets/vendor/ScrollTrigger.min.js?v=489bcf6d" defer></script>
   <script src="/assets/vendor/lenis.min.js?v=44dcd10f" defer></script>
   <script src="/js/config.js?v=00a57138" defer></script>
-  <script src="/js/main.js?v=576e22b4" defer></script>
+  <script src="/js/main.js?v=e49a547f" defer></script>
 </body>
 </html>

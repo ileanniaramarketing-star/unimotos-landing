@@ -47,6 +47,10 @@ function validate(input) {
   const lead = { tipo: 'cotacao', veiculo, nome, telefone, placa };
   if (input.pagina) lead.pagina = clean(input.pagina, 200);
   UTM_KEYS.forEach((k) => { if (input[k]) lead[k] = clean(input[k], k === 'gclid' || k === 'fbclid' ? 180 : 100); });
+  // de onde veio o lead: formulário do site ('site') ou pop-up dos botões de WhatsApp ('whatsapp'),
+  // e qual botão abriu o pop-up (cta: hero-wa, final-wa, footer, wa-float…) — pro relatório
+  lead.origem_form = input.origem_form === 'whatsapp' ? 'whatsapp' : 'site';
+  if (input.cta) lead.cta = clean(input.cta, 40);
   return { errors, lead };
 }
 
