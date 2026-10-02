@@ -25,6 +25,7 @@
   <nav class="painel-tabs" role="tablist">
     <button class="painel-tab is-active" id="tabBtnLeads" type="button" role="tab" aria-selected="true">Leads</button>
     <button class="painel-tab" id="tabBtnRelatorios" type="button" role="tab" aria-selected="false">Relatórios</button>
+    <button class="painel-tab" id="tabBtnDisparos" type="button" role="tab" aria-selected="false">Disparos</button>
   </nav>
 
   <main class="painel-body">
@@ -109,6 +110,72 @@
         <article class="report-card"><h3>Por origem (Power CRM)</h3><div class="report-list" id="repOrigem"></div></article>
         <article class="report-card"><h3>Por vendedor</h3><div class="report-list" id="repVendedor"></div></article>
         <article class="report-card"><h3>Por status</h3><div class="report-list" id="repStatus"></div></article>
+      </div>
+    </section>
+
+    <!-- ============================== DISPAROS (WhatsApp via Z-API) ============================== -->
+    <section class="painel-panel" id="painelDisparos" hidden>
+      <div class="disp-status" id="dispStatus">Verificando a conexão com o WhatsApp…</div>
+
+      <div class="disp-grid">
+        <form class="disp-card" id="dispForm" autocomplete="off">
+          <h3>Novo disparo</h3>
+
+          <div class="disp-field">
+            <label for="dNome">Nome do disparo</label>
+            <input id="dNome" type="text" maxlength="120" placeholder="Ex.: Promoção de outubro">
+          </div>
+
+          <div class="disp-field">
+            <label for="dLista">Lista de contatos <small>(nome e telefone, um por linha)</small></label>
+            <textarea id="dLista" rows="6" placeholder="Maria Silva;(31) 99999-1111&#10;João;31988887777"></textarea>
+            <div class="disp-row">
+              <label class="disp-file">Importar arquivo (.csv ou .txt)<input id="dArquivo" type="file" accept=".csv,.txt,text/csv,text/plain"></label>
+              <span class="disp-hint" id="dListaInfo">Nenhum contato ainda.</span>
+            </div>
+            <p class="disp-hint">Pode ter outras colunas (ex.: cidade, placa) — cada uma vira uma variável.</p>
+          </div>
+
+          <div class="disp-field">
+            <label for="dMensagem">Mensagem</label>
+            <div class="disp-vars" id="dVars"></div>
+            <textarea id="dMensagem" rows="6" maxlength="4000" placeholder="Olá, {primeiro_nome}! Tudo bem? …"></textarea>
+            <p class="disp-hint">Links (https://…) funcionam direto no texto. Com foto ou vídeo, a mensagem vira a legenda.</p>
+          </div>
+
+          <div class="disp-field">
+            <label>Foto ou vídeo <small>(opcional · foto até 5 MB, vídeo MP4 até 16 MB)</small></label>
+            <div class="disp-row">
+              <label class="disp-file">Escolher arquivo<input id="dMidia" type="file" accept="image/jpeg,image/png,image/webp,video/mp4"></label>
+              <button type="button" class="disp-link" id="dMidiaRemover" hidden>Remover</button>
+              <span class="disp-hint" id="dMidiaInfo"></span>
+            </div>
+            <div id="dMidiaPreview"></div>
+          </div>
+
+          <div class="disp-field disp-two">
+            <div><label for="dMin">Intervalo mínimo (segundos)</label><input id="dMin" type="number" min="10" max="600" value="15"></div>
+            <div><label for="dMax">Intervalo máximo (segundos)</label><input id="dMax" type="number" min="10" max="600" value="25"></div>
+          </div>
+          <p class="disp-hint" id="dTempo"></p>
+
+          <div class="disp-field">
+            <label for="dTeste">Enviar um teste antes</label>
+            <div class="disp-row">
+              <input id="dTeste" type="tel" placeholder="Seu WhatsApp com DDD">
+              <button type="button" class="disp-btn disp-btn--ghost" id="dTesteBtn">Enviar teste</button>
+            </div>
+          </div>
+
+          <p class="painel-msg" id="dMsg" hidden></p>
+          <button type="submit" class="disp-btn" id="dIniciar">Iniciar disparo</button>
+        </form>
+
+        <div class="disp-card">
+          <h3>Disparos</h3>
+          <div id="dLista2" class="disp-list"><p class="disp-hint">Nenhum disparo ainda.</p></div>
+          <div id="dDetalhe" hidden></div>
+        </div>
       </div>
     </section>
   </main>

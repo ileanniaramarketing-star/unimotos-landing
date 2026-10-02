@@ -90,6 +90,12 @@ function isAuthenticated(req) {
   return !!verifyToken(readCookie(req));
 }
 
+// e-mail da conta logada (ou null) — usado só pra registrar quem criou um disparo
+function sessionUser(req) {
+  const d = verifyToken(readCookie(req));
+  return d && d.u ? d.u : null;
+}
+
 // limite de tentativas de login por IP (não é sobre o /api/lead — usa seu próprio contador)
 const attempts = new Map();
 const WINDOW_MS = 10 * 60 * 1000;
@@ -103,4 +109,4 @@ function rateLimited(ip) {
   return list.length > MAX_ATTEMPTS;
 }
 
-module.exports = { configured, verifySupabaseToken, createSessionCookie, clearSessionCookie, isAuthenticated, rateLimited, COOKIE };
+module.exports = { configured, verifySupabaseToken, createSessionCookie, clearSessionCookie, isAuthenticated, sessionUser, rateLimited, COOKIE };

@@ -15,6 +15,8 @@ const { processPageView } = require('./lib/pageview');
 const { status: crmStatus } = require('./lib/powercrm');
 const auth = require('./lib/auth');
 const store = require('./lib/store');
+const disparo = require('./lib/disparo');
+const zapi = require('./lib/zapi');
 
 const has = (name) => process.argv.includes('--' + name);
 const arg = (name) => { const i = process.argv.indexOf('--' + name); return i > -1 ? process.argv[i + 1] : undefined; };
@@ -145,10 +147,62 @@ async function api(req, res, p) {
     }
   }
 
+  // ---------- Disparos em massa (WhatsApp via Z-API) — só com sessão do painel ----------
+  if (p === '/api/painel/disparos' || p.startsWith('/api/painel/disparos/')) return disparosApi(req, res, p);
+
   return json(res, 404, { ok: false, error: 'not_found' });
 }
 
-// GET em /painel, /painel/ ou /painel/index.html: exige sessão válida (senão manda pro login).
+let zapiCache = { at: 0, v: null };
+const testHits = new Map(); // limite do "enviar teste": 5 a cada 10 min por IP
+async function disparosApi(req, res, p) {
+  if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
+  const isPost = req.method === 'POST';
+  if (isPost) {
+    if (!sameOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' });
+    if (!/^application\/json/i.test(req.headers['content-type'] || '')) return json(res, 415, { ok: false, error: 'unsupported_media_type' });
+  } else if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+  const fail = (e) => {
+    if (e && e.code) { if (e.code === 413) { res.setHeader('Connection', 'close'); res.once('finish', () => req.destroy()); } return json(res, e.code, { ok: false, error: e.message === 'too_large' ? 'too_large' : 'invalid' }); }
+    console.error('[painel/disparos]', e && e.message);
+    return json(res, 502, { ok: false, error: 'store_unavailable' });
+  };
+  try {
+    const rest = p.slice('/api/painel/disparos'.length).replace(/^\/+/, '');
+    if (rest === '' && req.method === 'GET') {
+      if (Date.now() - zapiCache.at > 15000) zapiCache = { at: Date.now(), v: await zapi.status() };
+      return json(res, 200, { ok: true, zapi: zapiCache.v, limiteDiario: Number(process.env.DISPARO_LIMITE_DIARIO) || 500, maxDestinatarios: disparo.MAX_RECIPIENTS, campanhas: await disparo.listCampaigns() });
+    }
+    if (rest === '' && isPost) { const out = await disparo.createCampaign(await readJson(req, 3 * 1024 * 1024), auth.sessionUser(req)); return json(res, out.status, out.body); }
+    if (rest === 'midia' && isPost) {
+      const b = await readJson(req, 23 * 1024 * 1024);
+      const out = await disparo.uploadMedia(b && b.contentType, b && b.data);
+      return out.error ? json(res, out.error === 'arquivo_grande' ? 413 : 400, { ok: false, error: out.error }) : json(res, 200, { ok: true, url: out.url, tipo: out.tipo });
+    }
+    if (rest === 'teste' && isPost) {
+      const ip = clientIp(req), now = Date.now();
+      const hits = (testHits.get(ip) || []).filter((t) => now - t < 600000);
+      if (hits.length >= 5) return json(res, 429, { ok: false, error: 'rate_limited' });
+      hits.push(now); testHits.set(ip, hits);
+      const out = await disparo.sendTest(await readJson(req, 16 * 1024));
+      return json(res, out.status, out.body);
+    }
+    const m = /^([0-9a-f-]{36})(?:\/(pausar|retomar|cancelar))?$/.exec(rest);
+    if (m && req.method === 'GET' && !m[2]) {
+      const c = await disparo.getCampaign(m[1], new URL(req.url, 'http://x').searchParams.get('status') || undefined);
+      return c ? json(res, 200, { ok: true, campanha: c }) : json(res, 404, { ok: false, error: 'not_found' });
+    }
+    if (m && m[2] && isPost) {
+      await readJson(req).catch(() => ({}));
+      const fn = { pausar: disparo.pause, retomar: disparo.resume, cancelar: disparo.cancel }[m[2]];
+      const changed = await fn(m[1]);
+      return json(res, changed ? 200 : 409, { ok: changed, error: changed ? undefined : 'estado_invalido' });
+    }
+    return json(res, 404, { ok: false, error: 'not_found' });
+  } catch (e) { return fail(e); }
+}
+
+// GET em /painel,/painel/ ou /painel/index.html: exige sessão válida (senão manda pro login).
 // GET em /painel/login(.html) com sessão já válida: manda pro painel (evita mostrar login à toa).
 // Demais arquivos dentro de /painel/ (css, js) são estáticos normais — sem dado nenhum ali.
 function painelPageGuard(req, res, p) {
@@ -219,4 +273,6 @@ server.on('error', (e) => { console.error('Erro ao iniciar (' + e.code + ') na p
 server.listen(PORT, HOST, () => {
   console.log('Unimotos LP em http://' + (HOST === '0.0.0.0' ? 'localhost' : HOST) + ':' + PORT + (SRC ? '  [modo dev: arquivos-fonte]' : '  [dist/]'));
   console.log('CRM: ' + crmStatus().state);
+  console.log('Z-API (disparos): ' + (zapi.configured() ? 'configurada' : 'não configurada'));
+  disparo.start();
 });
