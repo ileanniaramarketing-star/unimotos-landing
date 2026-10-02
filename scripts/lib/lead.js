@@ -12,7 +12,8 @@ const recent = new Map();     // veiculo|telefone|placa -> timestamp
 
 const PLATE = /^[A-Z]{3}[0-9]{4}$|^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
 // UTMs + cliques pagos (gclid = Google Ads, fbclid = Meta Ads): vão para o lead e para o painel (/painel)
-const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid'];
+// act_id (conta de anúncio), utm_id, placement (posicionamento) e keyword (palavra-chave) entram no relatório completo
+const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'gclid', 'fbclid'];
 
 const clean = (s, max) => String(s == null ? '' : s).replace(/[\u0000-\u001f\u007f<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
 

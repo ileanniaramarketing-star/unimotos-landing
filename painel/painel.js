@@ -404,7 +404,7 @@
         const tr = document.createElement('tr');
         tr.append(
           cell(fmtDate(l.ts)), cell(l.nome), cell(fmtPhone(l.telefone)), cell(l.placa), cell(l.veiculo === 'carro' ? 'Carro' : 'Moto'),
-          cell(l.utm_source), cell(l.utm_campaign), cell(l.utm_content), cell(l.gclid), cell(l.fbclid),
+          cell(l.utm_source), cell(l.utm_medium), cell(l.utm_campaign), cell(l.utm_content), cell(l.utm_term), cell(l.placement), cell(l.keyword), cell(l.act_id), cell(l.utm_id), cell(l.gclid), cell(l.fbclid),
           cell(l.seller), statusBadge(l.status)
         );
         body.appendChild(tr);
@@ -433,6 +433,11 @@
       renderList('#repPlataforma', data.porPlataforma, data.total);
       renderList('#repCampanha', data.porCampanha, data.total);
       renderList('#repCriativo', data.porCriativo, data.total);
+      renderList('#repMeio', data.porMeio, data.total);
+      renderList('#repTermo', data.porTermo, data.total);
+      renderList('#repPosicionamento', data.porPosicionamento, data.total);
+      renderList('#repPalavraChave', data.porPalavraChave, data.total);
+      renderList('#repConta', data.porConta, data.total);
       renderList('#repOrigem', data.porOrigemCrm);
       renderList('#repVendedor', data.porVendedor);
       renderList('#repStatus', data.porStatus, data.total);

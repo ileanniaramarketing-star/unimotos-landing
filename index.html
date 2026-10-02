@@ -81,5 +81,20 @@
       <symbol id="g-sportcar" viewBox="0 0 120 120"><g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 80V70Q6 65 12 64L34 60L54 46Q56 44 60 44H80Q84 44 87 47L100 60L114 64Q118 65 118 70V80H100M80 80H44M24 80H6"/><circle cx="34" cy="80" r="10"/><circle cx="90" cy="80" r="10"/></g></symbol>
     </defs>
   </svg>
+  <script>
+  /* UTMs, act_id, placement, keyword e click ids (gclid/fbclid): esta página não carrega o main.js, então guardamos aqui na sessão
+     (mesma chave "uni_utm" do main.js) e levamos junto no clique para /motos/ e /carros/ — assim o lead
+     chega com a origem do anúncio mesmo vindo pela página de escolha. */
+  (function () { try {
+    var K = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'fbclid', 'gclid'];
+    var p = new URLSearchParams(location.search), f = {}, q = new URLSearchParams();
+    K.forEach(function (k) { if (p.get(k)) f[k] = p.get(k); });
+    if (Object.keys(f).length) { try { sessionStorage.setItem('uni_utm', JSON.stringify(f)); } catch (e) {} }
+    else { try { f = JSON.parse(sessionStorage.getItem('uni_utm') || '{}'); } catch (e) { f = {}; } }
+    Object.keys(f).forEach(function (k) { q.set(k, f[k]); });
+    var s = q.toString(); if (!s) return;
+    document.querySelectorAll('a[href="/motos/"], a[href="/carros/"]').forEach(function (a) { a.setAttribute('href', a.getAttribute('href') + '?' + s); });
+  } catch (e) {} })();
+  </script>
 </body>
 </html>

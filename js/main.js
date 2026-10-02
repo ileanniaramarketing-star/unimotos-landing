@@ -36,7 +36,7 @@
     const found = {};
     try {
       const p = new URLSearchParams(location.search);
-      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid'].forEach((k) => {
+      ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'fbclid', 'gclid'].forEach((k) => {
         if (p.get(k)) found[k] = p.get(k);
       });
       if (Object.keys(found).length) sessionStorage.setItem('uni_utm', JSON.stringify(found));
