@@ -3,6 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <!-- Google Tag Manager: essa página não carrega js/main.js (não tem formulário/animação), então
+       o GTM entra direto aqui, sem depender do carregamento automático das outras duas páginas. -->
+  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src= 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f); })(window,document,'script','dataLayer','GTM-NRQT599Q');</script>
+  <!-- End Google Tag Manager -->
+  <script>
+  /* Meta Pixel + PageView (navegador e servidor, mesmo eventID para deduplicar). Esta página não tinha Pixel:
+     anúncio apontando pra "/" gerava clique mas nenhuma visualização da página de destino na Meta. */
+  (function (w, d) {
+    var PIXEL = '2410461069470382';
+    var id = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'ev-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(w, d, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+    w.fbq('init', PIXEL);
+    w.fbq('track', 'PageView', {}, { eventID: id });
+    try {
+      var ck = function (n) { var m = d.cookie.match('(?:^|; )' + n + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; };
+      var b = { eventId: id, pagina: location.origin + location.pathname }, fbclid = new URLSearchParams(location.search).get('fbclid');
+      if (ck('_fbp')) b.fbp = ck('_fbp');
+      var fbc = ck('_fbc') || (fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : ''); if (fbc) b.fbc = fbc;
+      fetch('/api/pageview', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).catch(function () {});
+    } catch (e) {}
+  })(window, document);
+  </script>
   <title>Unimotos · Proteção veicular para motos e carros</title>
   <meta name="description" content="Proteção veicular para motos e carros. Escolha o que proteger e faça a cotação pela placa.">
   <meta name="theme-color" content="#050505">
@@ -17,10 +39,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=44ef2573">
-  <!-- Google Tag Manager: essa página não carrega js/main.js (não tem formulário/animação), então
-       o GTM entra direto aqui, sem depender do carregamento automático das outras duas páginas. -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start': new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0], j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src= 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f); })(window,document,'script','dataLayer','GTM-NRQT599Q');</script>
-  <!-- End Google Tag Manager -->
 </head>
 <body class="choose-page">
   <!-- Google Tag Manager (noscript) -->

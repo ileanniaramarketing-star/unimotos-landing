@@ -3,6 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <script>
+  /* Rastreamento no <head>: GTM + Meta Pixel + PageView sobem NA HORA, sem esperar GSAP/Lenis/main.js
+     (antes o PageView só disparava depois de ~160 KB de JS: quem saía antes não era contado -> Connect Rate baixo).
+     IDs públicos, iguais aos de js/config.js. O main.js vê window.__uniPv e não carrega tudo de novo. */
+  (function (w, d) {
+    var PIXEL = '2410461069470382', GTM = 'GTM-NRQT599Q';
+    var id = (w.crypto && w.crypto.randomUUID) ? w.crypto.randomUUID() : 'ev-' + Date.now() + '-' + Math.random().toString(36).slice(2);
+    w.__uniPv = id; w.dataLayer = w.dataLayer || [];
+    w.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
+    var g = d.createElement('script'); g.async = true; g.src = 'https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(GTM); d.head.appendChild(g);
+    !function (f, b, e, v, n, t, s) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = !0; n.version = '2.0'; n.queue = []; t = b.createElement(e); t.async = !0; t.src = v; s = b.getElementsByTagName(e)[0]; s.parentNode.insertBefore(t, s); }(w, d, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+    w.fbq('init', PIXEL);
+    w.fbq('track', 'PageView', {}, { eventID: id });
+    try {
+      var ck = function (n) { var m = d.cookie.match('(?:^|; )' + n + '=([^;]*)'); return m ? decodeURIComponent(m[1]) : ''; };
+      var b = { eventId: id, pagina: location.origin + location.pathname }, fbclid = new URLSearchParams(location.search).get('fbclid');
+      if (ck('_fbp')) b.fbp = ck('_fbp');
+      var fbc = ck('_fbc') || (fbclid ? 'fb.1.' + Date.now() + '.' + fbclid : ''); if (fbc) b.fbc = fbc;
+      fetch('/api/pageview', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).catch(function () {});
+    } catch (e) {}
+  })(window, document);
+  </script>
 
   <title>Unimotos · Proteção veicular para carros — cotação pela placa</title>
   <meta name="description" content="Proteção veicular para o seu carro: roubo e furto, colisão, incêndio, carro reserva e assistência 24 horas. Informe a placa e receba a cotação pelo WhatsApp. Consulte condições.">
@@ -554,6 +576,6 @@
   <script src="/assets/vendor/ScrollTrigger.min.js?v=489bcf6d" defer></script>
   <script src="/assets/vendor/lenis.min.js?v=44dcd10f" defer></script>
   <script src="/js/config.js?v=00a57138" defer></script>
-  <script src="/js/main.js?v=44edb2d2" defer></script>
+  <script src="/js/main.js?v=576e22b4" defer></script>
 </body>
 </html>

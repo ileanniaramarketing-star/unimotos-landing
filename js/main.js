@@ -53,6 +53,7 @@
   }
 
   function loadTracking() {
+    if (window.__uniPv) return; // o <head> da página já subiu GTM + Pixel + PageView (e o espelho no servidor)
     if (cfg.gtmId) {
       window.dataLayer.push({ 'gtm.start': Date.now(), event: 'gtm.js' });
       injectScript('https://www.googletagmanager.com/gtm.js?id=' + encodeURIComponent(cfg.gtmId));
