@@ -565,15 +565,13 @@
     });
 
     // ----- HERO: entrada (títulos, formulário, escudo neon, selo de preço, cartão de benefícios) -----
-    const introTitle = $$('#heroTitle .line > span');
-    gsap.set(introTitle, { yPercent: 112, y: 0 });
     const shieldPaths = $$('.formscene__shield path');
     gsap.set(shieldPaths, { strokeDashoffset: 1 });
     gsap.set('.price', { scale: .6, rotation: -8 });
     const perks = $$('.perk');
     gsap.timeline({ defaults: { ease: 'power4.out' } })
-      .fromTo('.hero__arcs i', { opacity: 0, scale: .82 }, { opacity: 1, scale: 1, duration: 1.7, stagger: .15, ease: 'expo.out' }, 0)
-      .to(introTitle, { yPercent: 0, duration: 1.1, stagger: .12 }, .05)
+      .fromTo('.hero__fx', { opacity: 0 }, { opacity: 1, duration: 1.6, ease: 'power2.out' }, 0)
+      .fromTo('[data-hero="title"]', { opacity: 0, y: 34, scale: .94 }, { opacity: 1, y: 0, scale: 1, duration: 1.3, ease: 'expo.out' }, .05)
       .fromTo('[data-hero="pill"]', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .8 }, 0)
       .fromTo('[data-hero="sub"]', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .9 }, .5)
       .fromTo('[data-hero="form"]', { opacity: 0, y: 46, scale: .97 }, { opacity: 1, y: 0, scale: 1, duration: 1.1 }, .3)
@@ -582,27 +580,25 @@
       .fromTo('[data-hero="perks"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9 }, .7)
       .fromTo(perks, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .1 }, 1.0);
 
-    // ----- OFERTA: "Outubro" é riscado, sobe e some; "Novembro" (e o "Somente") entram e ficam fixos -----
-    const offer = $('#offer');
-    if (offer && !reduce) {
-      const old = $('.ofr__old', offer), strike = $('.ofr__strike', offer), neu = $('.ofr__new', offer), month = $('.ofr__month', offer), some = $('.ofr__some', offer);
-      gsap.delayedCall(1.9, () => {
-        const oldW = old.offsetWidth, newW = neu.offsetWidth, someW = some.scrollWidth;
-        gsap.set(month, { width: oldW });
-        gsap.set(neu, { yPercent: 100, y: 0, opacity: 0 });
-        const finish = () => { offer.classList.add('is-done'); gsap.set([month, old, neu, some, strike], { clearProps: 'all' }); };
-        gsap.timeline({ defaults: { ease: 'power3.out' }, onComplete: finish })
-          .to(strike, { scaleX: 1, duration: .5, ease: 'power2.inOut' }, .9)   // risca o mês
-          .to(old, { opacity: .45, duration: .3 }, 1.0)
-          .to(old, { yPercent: -100, opacity: 0, duration: .5, ease: 'power3.in' }, 1.75)
-          .to(neu, { yPercent: 0, opacity: 1, duration: .6, ease: 'back.out(1.6)' }, 1.85)
-          .to(month, { width: newW, duration: .5, ease: 'power3.inOut' }, 1.85)
-          .to(some, { maxWidth: someW, opacity: 1, duration: .55 }, 1.85);
-      });
+    // ----- FUNDO DO HERO: luz (branco + vermelho) que segue o cursor; no toque ela passeia sozinha -----
+    const fx = $('#heroFx');
+    if (fx) {
+      const hh = $('#hero');
+      const pos = { x: hh.offsetWidth * .32, y: hh.offsetHeight * .3 };
+      const paint = () => { fx.style.setProperty('--mx', pos.x + 'px'); fx.style.setProperty('--my', pos.y + 'px'); };
+      paint();
+      if (!reduce) {
+        if (fine) {
+          hh.addEventListener('pointermove', (e) => {
+            const r = hh.getBoundingClientRect();
+            gsap.to(pos, { x: e.clientX - r.left, y: e.clientY - r.top, duration: .7, ease: 'power3.out', overwrite: 'auto', onUpdate: paint });
+          });
+        } else {
+          const wander = () => gsap.to(pos, { x: gsap.utils.random(.15, .9) * hh.offsetWidth, y: gsap.utils.random(.1, .7) * hh.offsetHeight, duration: gsap.utils.random(3.5, 5.5), ease: 'sine.inOut', onUpdate: paint, onComplete: wander });
+          wander();
+        }
+      }
     }
-
-    // arcos vermelhos sobem devagar ao rolar
-    gsap.to('.hero__arcs i:nth-child(1)', { yPercent: 12, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
 
     // ----- parallax de mouse no hero + cursor + botões magnéticos -----
     if (fine) {
@@ -619,17 +615,17 @@
 
       const hero = $('#hero');
       const shield = $('.formscene__shield');
-      const arcs = $$('.hero__arcs i');
+      const seal = $('.bseal__emblem');
       hero.addEventListener('pointermove', (e) => {
         const r = hero.getBoundingClientRect();
         const nx = (e.clientX - r.left) / r.width - .5;
         const ny = (e.clientY - r.top) / r.height - .5;
         if (shield) gsap.to(shield, { x: nx * -26, y: ny * -18, duration: 1, ease: 'power3.out', overwrite: 'auto' });
-        arcs.forEach((a, i) => gsap.to(a, { x: nx * (18 + i * 14), y: ny * (12 + i * 10), duration: 1.4, ease: 'power3.out', overwrite: 'auto' }));
+        if (seal) gsap.to(seal, { rotationY: nx * 16, rotationX: ny * -12, transformPerspective: 900, duration: .9, ease: 'power3.out', overwrite: 'auto' });
       });
       hero.addEventListener('pointerleave', () => {
         if (shield) gsap.to(shield, { x: 0, y: 0, duration: 1.2, ease: 'power3.out' });
-        gsap.to(arcs, { x: 0, y: 0, duration: 1.4, ease: 'power3.out' });
+        if (seal) gsap.to(seal, { rotationY: 0, rotationX: 0, duration: 1.2, ease: 'power3.out' });
       });
 
       $$('[data-magnetic]').forEach((el) => {
@@ -655,7 +651,7 @@
 
     // ----- marquee: acelera com a velocidade do scroll -----
     const track = $('#marqueeTrack');
-    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 16, repeat: -1 });
+    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 42, repeat: -1 }); // grupo ~2,4x mais largo (Esquenta Black): duração escala p/ manter a mesma velocidade
     let ts = 1, dir = 1;
     ScrollTrigger.create({
       onUpdate: (self) => {

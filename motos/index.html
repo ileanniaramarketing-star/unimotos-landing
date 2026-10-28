@@ -45,7 +45,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
 
   <script>document.documentElement.className = 'js';</script>
-  <link rel="stylesheet" href="/css/style.css?v=477645ce">
+  <link rel="stylesheet" href="/css/style.css?v=7459cc1e">
 </head>
 
 <body data-vehicle="moto">
@@ -74,18 +74,50 @@
   <main id="top">
     <!-- ============================== HERO ============================== -->
     <section class="hero" id="hero">
-      <div class="hero__arcs" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="hero__fx" id="heroFx" aria-hidden="true">
+        <i class="fx-hatch"></i><i class="fx-grid"></i><i class="fx-lit"></i><i class="fx-glow"></i>
+        <i class="fx-streak"></i><i class="fx-streak fx-streak--r"></i>
+      </div>
       <div class="hero__vignette" aria-hidden="true"></div>
 
       <div class="hero__inner container">
         <div class="hero__copy">
           <p class="pill" data-hero="pill"><i class="pill__dot"></i> Proteção veicular para motos</p>
-          <h1 class="hero__title" id="heroTitle">
-            <span class="line"><span>Proteja o que</span></span>
-            <span class="line"><span>levou tempo</span></span>
-            <span class="line"><span class="hl">para construir!</span></span>
+          <h1 class="bseal" id="heroTitle" data-hero="title">
+            <span class="bseal__wing" aria-hidden="true"></span>
+            <svg class="bseal__emblem" viewBox="0 0 240 240" width="210" height="210" aria-hidden="true" focusable="false">
+              <defs>
+                <pattern id="bsHatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0H6" stroke="#fff" stroke-opacity=".04" stroke-width="1"/></pattern>
+                <linearGradient id="bsSteel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e6e6ea"/><stop offset=".55" stop-color="#bdbdc4"/><stop offset="1" stop-color="#85858e"/></linearGradient>
+                <clipPath id="bsWedge"><path d="M120 120 L120 -30 L270 -30 L270 120 Z"/></clipPath>
+                <path id="bsRing" d="M120 120 m-88 0 a88 88 0 1 1 176 0 a88 88 0 1 1 -176 0"/>
+              </defs>
+              <circle cx="120" cy="120" r="117" fill="#0a0a0b" stroke="#34343a" stroke-width="1.5"/>
+              <g class="bs-spin">
+                <circle cx="120" cy="120" r="112" fill="none" stroke="#5e5e66" stroke-width="5" stroke-dasharray="1.4 4.4"/>
+                <circle cx="120" cy="120" r="112" fill="none" stroke="#ff2d34" stroke-width="5" stroke-dasharray="1.4 4.4" clip-path="url(#bsWedge)"/>
+              </g>
+              <circle cx="120" cy="120" r="105" fill="#0c0c0d"/>
+              <circle cx="120" cy="120" r="105" fill="url(#bsHatch)" stroke="#3a3a40" stroke-width="1"/>
+              <g class="bs-spin bs-spin--rev">
+                <circle cx="120" cy="120" r="100" fill="none" stroke="#ff2d34" stroke-width="3" stroke-dasharray="210 418"/>
+                <circle cx="120" cy="120" r="100" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.2" stroke-dasharray="36 592" stroke-dashoffset="-330"/>
+              </g>
+              <g class="bs-spin bs-spin--slow">
+                <text class="bs-ring"><textPath href="#bsRing" textLength="548" lengthAdjust="spacing">ESQUENTA BLACK <tspan class="rd">•</tspan> UNIMOTOS <tspan class="rd">•</tspan> ESQUENTA BLACK <tspan class="rd">•</tspan> UNIMOTOS <tspan class="rd">•</tspan></textPath></text>
+              </g>
+              <circle cx="120" cy="120" r="73" fill="#070708" stroke="#3a3a40" stroke-width="1"/>
+              <text class="bs-esq" x="123" y="96" text-anchor="middle">ESQUENTA</text>
+              <text class="bs-blk" x="121" y="144" text-anchor="middle">BLACK</text>
+              <text class="bs-uni" x="121.6" y="162" text-anchor="middle"><tspan class="rd">//</tspan> UNIMOTOS</text>
+            </svg>
+            <span class="bseal__wing bseal__wing--r" aria-hidden="true"></span>
+            <span class="bseal__sr">Esquenta Black Unimotos</span>
           </h1>
-          <p class="hero__sub ofr" id="offer" data-hero="sub"><span class="ofr__l1">Pague o Primeiro Boleto</span><span class="ofr__l2"><span class="ofr__some">Somente&nbsp;</span>em <span class="ofr__month"><span class="ofr__old" aria-hidden="true">Outubro<i class="ofr__strike"></i></span><span class="ofr__new">Novembro</span></span>!</span></p>
+          <div class="black" id="offer" data-hero="sub">
+            <p class="black__lead"><span>Pague até <b>50%</b> a menos na adesão</span> <span>e <em>primeiro boleto somente em 10 de dezembro</em></span></p>
+            <p class="black__note">Sujeito ao regulamento da associação. Consulte condições.</p>
+          </div>
         </div>
 
         <div class="hero__formwrap formscene" id="cotacao" data-hero="form">
@@ -179,9 +211,13 @@
     <div class="marquee" aria-hidden="true">
       <div class="marquee__band">
         <div class="marquee__track" id="marqueeTrack">
+          <span>Esquenta Black</span><i></i><span class="o">Pague até 50% a menos na adesão</span><i></i><span>Proteja agora</span><i></i><span class="o">Primeiro boleto somente em 10 de dezembro</span><i></i>
           <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Esquenta Black</span><i></i><span class="o">Pague até 50% a menos na adesão</span><i></i><span>Proteja agora</span><i></i><span class="o">Primeiro boleto somente em 10 de dezembro</span><i></i>
           <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Esquenta Black</span><i></i><span class="o">Pague até 50% a menos na adesão</span><i></i><span>Proteja agora</span><i></i><span class="o">Primeiro boleto somente em 10 de dezembro</span><i></i>
           <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
+          <span>Esquenta Black</span><i></i><span class="o">Pague até 50% a menos na adesão</span><i></i><span>Proteja agora</span><i></i><span class="o">Primeiro boleto somente em 10 de dezembro</span><i></i>
           <span>Roubo e furto</span><i></i><span class="o">Guincho todo o Brasil</span><i></i><span>100% da FIPE</span><i></i><span class="o">Assistência 24h</span><i></i>
         </div>
       </div>
@@ -464,6 +500,11 @@
         <p class="eyebrow" data-reveal>Sua moto merece</p>
         <h2 class="final__title" data-split>Cote agora.</h2>
         <p class="final__sub" data-reveal>Informe a placa e receba a cotação de proteção veicular, sem compromisso.</p>
+        <div class="blackbar" data-reveal>
+          <p class="blackbar__brand"><span class="blackbar__e">Esquenta</span> <b class="blackbar__b">Black</b> <span class="blackbar__u">Unimotos</span></p>
+          <p class="blackbar__deal"><span>Pague até <b>50%</b> a menos na adesão</span><i class="blackbar__sep" aria-hidden="true"></i><span><em>Primeiro boleto somente em 10 de dezembro</em></span></p>
+          <p class="blackbar__note">Sujeito ao regulamento da associação. Consulte condições.</p>
+        </div>
         <div class="final__ctas" data-reveal>
           <a class="btn btn--primary btn--xl" data-cta="final-cotacao" data-magnetic href="#cotacao">
             <span>Fazer minha cotação</span>
@@ -633,6 +674,6 @@
   <script src="/assets/vendor/ScrollTrigger.min.js?v=489bcf6d" defer></script>
   <script src="/assets/vendor/lenis.min.js?v=44dcd10f" defer></script>
   <script src="/js/config.js?v=00a57138" defer></script>
-  <script src="/js/main.js?v=e49a547f" defer></script>
+  <script src="/js/main.js?v=6dc03623" defer></script>
 </body>
 </html>
