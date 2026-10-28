@@ -130,3 +130,5 @@ table.painel-table { width: 100%; border-collapse: collapse; font-size: .85rem; 
   .painel-top, .painel-tabs, .painel-body { padding-left: 18px; padding-right: 18px; }
   .painel-top { flex-wrap: wrap; row-gap: 10px; }
 }
+.painel-export { display: inline-flex; align-items: center; height: 40px; padding: 0 20px; border-radius: 10px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .04); color: #fff; font-weight: 800; font-size: .86rem; text-decoration: none; }
+.painel-export:hover { background: rgba(255, 255, 255, .1); }

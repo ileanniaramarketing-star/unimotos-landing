@@ -360,11 +360,10 @@
     // ----- abas -----
     const tabs = { leads: $('#tabBtnLeads'), relatorios: $('#tabBtnRelatorios'), disparos: $('#tabBtnDisparos') };
     const panels = { leads: $('#painelLeads'), relatorios: $('#painelRelatorios'), disparos: $('#painelDisparos') };
-    let reportsLoaded = false;
     const disparos = initDisparos();
     function showTab(name) {
       for (const k of Object.keys(tabs)) { tabs[k].classList.toggle('is-active', k === name); tabs[k].setAttribute('aria-selected', String(k === name)); panels[k].hidden = k !== name; }
-      if (name === 'relatorios' && !reportsLoaded) { reportsLoaded = true; loadReports(); }
+      if (name === 'relatorios') loadReports().catch(() => {});
       disparos.active(name === 'disparos');
     }
     tabs.leads.addEventListener('click', () => showTab('leads'));
@@ -410,6 +409,10 @@
         body.appendChild(tr);
       }
     }
+    // link de exportação acompanha os filtros atuais (baixa os dados brutos, não só os 200 da tela)
+    const exportLink = $('#leadsExport');
+    const syncExport = () => { const q = paramsFrom(leadsForm).toString(); exportLink.href = '/api/painel/leads.csv' + (q ? '?' + q : ''); };
+    leadsForm.addEventListener('input', syncExport); leadsForm.addEventListener('change', syncExport); syncExport();
     leadsForm.addEventListener('submit', (e) => { e.preventDefault(); loadLeads().catch(() => { countEl.textContent = 'Não deu para carregar os leads agora.'; }); });
 
     // ----- RELATÓRIOS -----
@@ -429,6 +432,11 @@
       if (!data) return;
       $('#repTotal').firstChild.textContent = data.total;
       $('#repTotalSub').textContent = data.total === 1 ? 'lead no período' : 'leads no período';
+      const f1 = (n) => (Math.round(n * 10) / 10).toLocaleString('pt-BR');
+      $('#repMediaDia').textContent = f1(data.mediaDia || 0);
+      $('#repMediaSemana').textContent = f1(data.mediaSemana || 0);
+      $('#repMediaMes').textContent = f1(data.mediaMes || 0);
+      $('#repMediaInfo').textContent = 'Base: ' + data.dias + (data.dias === 1 ? ' dia' : ' dias') + ' no período (semana = 7 dias, mês = 30).';
       renderList('#repVeiculo', data.porVeiculo, data.total);
       renderList('#repPlataforma', data.porPlataforma, data.total);
       renderList('#repCampanha', data.porCampanha, data.total);

@@ -76,8 +76,14 @@ function readJson(req, limit = 16 * 1024) {
 }
 
 // converte "2026-09-01" (ou timestamp em ms) em epoch ms; vazio/ inválido -> undefined (sem filtro)
-function parseDateParam(v) {
+// edge: 'from' = início do dia, 'to' = fim do dia (horário de Brasília, UTC-3) quando vem só AAAA-MM-DD;
+// antes o "Até" virava meia-noite UTC e deixava o dia escolhido (inclusive hoje) de fora.
+function parseDateParam(v, edge) {
   if (!v) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+    const t = Date.parse(v + (edge === 'to' ? 'T23:59:59.999-03:00' : 'T00:00:00.000-03:00'));
+    return Number.isFinite(t) ? t : undefined;
+  }
   const n = Number(v);
   if (Number.isFinite(n) && String(n) === v) return n;
   const t = Date.parse(v);
@@ -137,12 +143,29 @@ async function api(req, res, p) {
     if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
     if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
     const q = new URL(req.url, 'http://x').searchParams;
-    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to')), limit: q.get('limit') || undefined };
+    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to'), limit: q.get('limit') || undefined };
     try {
       if (p === '/api/painel/leads') return json(res, 200, Object.assign({ ok: true }, await store.listLeads(filters)));
       return json(res, 200, Object.assign({ ok: true }, await store.aggregate(filters)));
     } catch (e) {
       console.error('[painel] erro ao consultar o Supabase:', e.message);
+      return json(res, 502, { ok: false, error: 'store_unavailable' });
+    }
+  }
+
+  // Exportação bruta dos leads (CSV) — só com sessão do painel (contém dado pessoal), respeita os filtros da aba Leads
+  if (p === '/api/painel/leads.csv') {
+    if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
+    const q = new URL(req.url, 'http://x').searchParams;
+    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to') };
+    try {
+      const csv = await store.exportCsv(filters);
+      const nome = 'leads-' + new Date().toISOString().slice(0, 10) + '.csv';
+      res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="' + nome + '"', 'Cache-Control': 'no-store' });
+      return res.end(csv);
+    } catch (e) {
+      console.error('[painel] erro ao exportar:', e.message);
       return json(res, 502, { ok: false, error: 'store_unavailable' });
     }
   }

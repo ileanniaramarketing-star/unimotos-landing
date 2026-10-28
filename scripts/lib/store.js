@@ -102,6 +102,41 @@ async function listLeads(opts) {
   return { total: Number.isFinite(total) ? total : rows.length, leads: rows.map(fromRow) };
 }
 
+// Exportação bruta (CSV): TODOS os leads do filtro, todas as colunas, paginando de 1000 em 1000
+// (o PostgREST do Supabase corta respostas num teto por requisição). Mesmos filtros de listLeads.
+// Separador ";" (e não vírgula): é o que o Excel em português do Brasil espera — com vírgula, ao dar duplo
+// clique ele joga tudo numa coluna só. Google Sheets e Power BI detectam o ";" sozinhos.
+const CSV_SEP = ';';
+const CSV_COLS = ['id', 'ts', 'tipo', 'veiculo', 'nome', 'telefone', 'placa', 'origem_form', 'cta', 'pagina', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'gclid', 'fbclid', 'crm_origem', 'vendedor', 'status', 'status_ts', 'crm_quotation_code', 'crm_negotiation_code'];
+function csvCell(v) {
+  if (v == null) return '';
+  let t = String(v);
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // evita "injeção de fórmula" ao abrir no Excel/Sheets
+  return /[",\r\n;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+async function exportCsv(opts) {
+  opts = opts || {};
+  const base = ['select=' + CSV_COLS.join(','), 'order=ts.desc'];
+  if (opts.veiculo) base.push('veiculo=eq.' + encodeURIComponent(opts.veiculo));
+  if (opts.status) base.push('status=eq.' + encodeURIComponent(opts.status));
+  const from = toIso(opts.from), to = toIso(opts.to);
+  if (from) base.push('ts=gte.' + encodeURIComponent(from));
+  if (to) base.push('ts=lte.' + encodeURIComponent(to));
+  if (opts.q) {
+    const q = String(opts.q).replace(/[,()]/g, '');
+    base.push('or=(nome.ilike.*' + encodeURIComponent(q) + '*,telefone.ilike.*' + encodeURIComponent(q) + '*,placa.ilike.*' + encodeURIComponent(q) + '*)');
+  }
+  const lines = [CSV_COLS.join(CSV_SEP)];
+  const PAGE = 1000;
+  for (let off = 0; off < 100000; off += PAGE) {
+    const res = await sb('/' + TABLE + '?' + base.concat('limit=' + PAGE, 'offset=' + off).join('&'));
+    const rows = await res.json();
+    for (const r of rows) lines.push(CSV_COLS.map((c) => csvCell(r[c])).join(CSV_SEP));
+    if (rows.length < PAGE) break;
+  }
+  return '﻿' + lines.join('\r\n') + '\r\n'; // BOM: o Excel abre os acentos certo
+}
+
 // contagem simples (nome -> quantidade), já ordenada da maior para a menor
 function tally(rows, key) {
   const m = new Map();
@@ -112,7 +147,7 @@ function tally(rows, key) {
 // aba "Relatórios": soma geral e divisões por veículo, plataforma, campanha, criativo, origem (CRM), vendedor e status
 async function aggregate(opts) {
   opts = opts || {};
-  const params = ['select=veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status', 'limit=20000'];
+  const params = ['select=ts,veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status', 'limit=20000'];
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) params.push('ts=gte.' + encodeURIComponent(from));
   if (to) params.push('ts=lte.' + encodeURIComponent(to));
@@ -120,8 +155,18 @@ async function aggregate(opts) {
   const raw = await res.json();
   const rows = raw.map((r) => ({ veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword, origem_form: r.origem_form === 'whatsapp' ? 'Pop-up do WhatsApp' : 'Formulário do site', cta: r.cta, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status }));
   const sent = rows.filter((r) => r.status === 'sent' || r.status === 'dry-run');
+  // médias: período = filtro "De/Até" (ou do 1º lead até agora/até o fim do filtro); mínimo de 1 dia
+  const tss = raw.map((r) => Date.parse(r.ts)).filter(Number.isFinite);
+  const start = opts.from || (tss.length ? Math.min(...tss) : Date.now());
+  const end = Math.min(opts.to || Date.now(), Date.now());
+  const dias = Math.max(1, Math.ceil((end - start) / 86400000));
+  const mediaDia = rows.length / dias;
   return {
     total: rows.length,
+    dias,
+    mediaDia,
+    mediaSemana: mediaDia * 7,
+    mediaMes: mediaDia * 30,
     porVeiculo: tally(rows, 'veiculo'),
     porPlataforma: tally(rows, 'utm_source'),
     porCampanha: tally(rows, 'utm_campaign'),
@@ -149,4 +194,4 @@ async function countsBySeller(veiculo) {
   return counts;
 }
 
-module.exports = { recordCreated, recordStatus, listLeads, aggregate, countsBySeller };
+module.exports = { recordCreated, recordStatus, listLeads, exportCsv, aggregate, countsBySeller };
