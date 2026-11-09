@@ -28,9 +28,21 @@
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const hasGsap = !!(window.gsap && window.ScrollTrigger);
-  // cada página declara seu veículo: <body data-vehicle="moto|carro">
-  const VEHICLE = document.body.getAttribute('data-vehicle') === 'carro' ? 'carro' : 'moto';
-  const NOUN = VEHICLE === 'carro' ? { de: 'do carro', seu: 'o seu carro' } : { de: 'da moto', seu: 'a sua moto' };
+  // cada página declara seu veículo: <body data-vehicle="moto|carro">.
+  // A página /black/ (campanha única para os dois) declara também data-vehicle-switch: aí o visitante troca
+  // entre moto e carro (botões [data-vehicle-pick], ou ?v=carro na URL) e tudo acompanha a escolha:
+  // preço, textos, mensagem do WhatsApp e o veículo do lead enviado.
+  const SWITCHABLE = document.body.hasAttribute('data-vehicle-switch');
+  const nounFor = (v) => (v === 'carro' ? { de: 'do carro', seu: 'o seu carro' } : { de: 'da moto', seu: 'a sua moto' });
+  let VEHICLE = document.body.getAttribute('data-vehicle') === 'carro' ? 'carro' : 'moto';
+  if (SWITCHABLE) {
+    try {
+      const qs = new URLSearchParams(location.search);
+      const want = qs.get('v') || qs.get('veiculo') || sessionStorage.getItem('uni_vehicle'); // a URL (anúncio) vale mais que a última escolha
+      if (want === 'carro' || want === 'moto') VEHICLE = want;
+    } catch (e) { /* storage indisponível: fica com o padrão da página */ }
+  }
+  let NOUN = nounFor(VEHICLE);
 
   /* ------------------------------------------------------------------ *
    * 1. RASTREAMENTO + CONFIG
@@ -130,14 +142,66 @@
     return 'https://wa.me/' + digits(phone) + '?text=' + encodeURIComponent(text);
   }
 
+  // endereço (e mensagem) dos botões de WhatsApp: refeito quando o visitante troca de veículo
+  function refreshWaLinks() { $$('[data-wa]').forEach((a) => { a.href = waUrl('default'); }); }
+
+  // selo "a partir de R$ X/mês" (config.js -> price.moto / price.carro). Vazio = não mostra.
+  // Também preenche [data-price="moto|carro"] (cartões de veículo da página /black/).
+  function applyPrice() {
+    const price = (cfg.price || {})[VEHICLE];
+    if (price) {
+      const txt = String(price).replace('.', ',');
+      // "55,36" -> 55.36 (vírgula decimal; ponto só como milhar quando há vírgula)
+      const num = /,/.test(String(price)) ? parseFloat(String(price).replace(/\./g, '').replace(',', '.')) : parseFloat(price);
+      const val = $('#priceValue'); if (val) val.textContent = txt;
+      const day = $('#priceDay');
+      if (day) { if (num > 0) day.textContent = 'Menos de R$ ' + (Math.floor(num / 30) + 1) + ',00 por dia'; day.hidden = !(num > 0); }
+      const box = $('#heroPrice'); if (box) box.hidden = false;
+      const note = $('#priceNote');
+      if (note) { note.textContent = 'Valor a partir de R$ ' + txt + '/mês, sujeito ao modelo, ano e valor FIPE do veículo. Consulte condições.'; note.hidden = false; }
+    }
+    $$('[data-price]').forEach((el) => {
+      const p = (cfg.price || {})[el.getAttribute('data-price')];
+      if (p) el.textContent = String(p).replace('.', ',');
+    });
+  }
+
+  // troca de veículo (só nas páginas com data-vehicle-switch)
+  function setVehicle(v, from) {
+    const next = v === 'carro' ? 'carro' : 'moto';
+    const changed = next !== VEHICLE;
+    VEHICLE = next; NOUN = nounFor(next);
+    document.body.setAttribute('data-vehicle', next);
+    $$('[data-vehicle-pick]').forEach((b) => {
+      const on = b.getAttribute('data-vehicle-pick') === next;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+    applyPrice();
+    refreshWaLinks();
+    if (changed) {
+      const r = $('#plateResult'); if (r) { r.hidden = true; r.textContent = ''; } // era a consulta de outra placa/veículo
+      try { window.dataLayer.push({ event: 'vehicle_select', veiculo: next, origem: from || '' }); } catch (e) { /* tracking nunca quebra a página */ }
+    }
+  }
+  function initVehicle() {
+    if (!SWITCHABLE) return;
+    $$('[data-vehicle-pick]').forEach((b) => b.addEventListener('click', () => {
+      const v = b.getAttribute('data-vehicle-pick');
+      try { sessionStorage.setItem('uni_vehicle', v === 'carro' ? 'carro' : 'moto'); } catch (e) { /* ok */ }
+      setVehicle(v, b.getAttribute('data-cta') || 'pick');
+    }));
+    setVehicle(VEHICLE, 'init'); // estado inicial dos botões, preço e links (URL ?v= ou última escolha)
+  }
+
   function applyConfig() {
     // todos os botões de WhatsApp
     $$('[data-wa]').forEach((a) => {
-      a.href = waUrl('default');
       a.target = '_blank';
       a.rel = 'noopener';
       a.addEventListener('click', () => track('Contact', { cta: a.getAttribute('data-cta') || 'wa' }));
     });
+    refreshWaLinks();
 
     // fotos opcionais dos cards de estilo
     $$('.scard[data-cta]').forEach((card) => {
@@ -161,19 +225,7 @@
     if (f.facebook) { const a = $('#footFb'); a.href = f.facebook; a.hidden = false; }
     $('#year').textContent = new Date().getFullYear();
 
-    // selo "a partir de R$ X/mês" (config.js -> price.moto / price.carro). Vazio = não mostra.
-    const price = (cfg.price || {})[VEHICLE];
-    if (price) {
-      const txt = String(price).replace('.', ',');
-      // "55,36" -> 55.36 (vírgula decimal; ponto só como milhar quando há vírgula)
-      const num = /,/.test(String(price)) ? parseFloat(String(price).replace(/\./g, '').replace(',', '.')) : parseFloat(price);
-      $('#priceValue').textContent = txt;
-      const day = $('#priceDay');
-      if (day) { if (num > 0) day.textContent = 'Menos de R$ ' + (Math.floor(num / 30) + 1) + ',00 por dia'; else day.hidden = true; }
-      $('#heroPrice').hidden = false;
-      const note = $('#priceNote');
-      if (note) { note.textContent = 'Valor a partir de R$ ' + txt + '/mês, sujeito ao modelo, ano e valor FIPE do veículo. Consulte condições.'; note.hidden = false; }
-    }
+    applyPrice();
 
     // números institucionais (config.js -> stats). Só aparece se houver itens.
     const stats = Array.isArray(cfg.stats) ? cfg.stats : [];
@@ -567,18 +619,19 @@
     // ----- HERO: entrada (títulos, formulário, escudo neon, selo de preço, cartão de benefícios) -----
     const shieldPaths = $$('.formscene__shield path');
     gsap.set(shieldPaths, { strokeDashoffset: 1 });
-    gsap.set('.price', { scale: .6, rotation: -8 });
+    const priceBadge = $('.price'); // selo de preço do herói (hoje removido das páginas; se voltar, a entrada animada volta junto)
+    if (priceBadge) gsap.set(priceBadge, { scale: .6, rotation: -8 });
     const perks = $$('.perk');
-    gsap.timeline({ defaults: { ease: 'power4.out' } })
+    const heroTl = gsap.timeline({ defaults: { ease: 'power4.out' } })
       .fromTo('.hero__fx', { opacity: 0 }, { opacity: 1, duration: 1.6, ease: 'power2.out' }, 0)
       .fromTo('[data-hero="title"]', { opacity: 0, y: 34, scale: .94 }, { opacity: 1, y: 0, scale: 1, duration: 1.3, ease: 'expo.out' }, .05)
       .fromTo('[data-hero="pill"]', { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: .8 }, 0)
       .fromTo('[data-hero="sub"]', { opacity: 0, y: 22 }, { opacity: 1, y: 0, duration: .9 }, .5)
       .fromTo('[data-hero="form"]', { opacity: 0, y: 46, scale: .97 }, { opacity: 1, y: 0, scale: 1, duration: 1.1 }, .3)
       .to(shieldPaths, { strokeDashoffset: 0, duration: 1.4, stagger: .25, ease: 'power2.inOut' }, .6)
-      .to('.price', { scale: 1, rotation: 2, duration: .9, ease: 'back.out(2)' }, 1.1)
       .fromTo('[data-hero="perks"]', { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: .9 }, .7)
       .fromTo(perks, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .6, stagger: .1 }, 1.0);
+    if (priceBadge) heroTl.to(priceBadge, { scale: 1, rotation: 2, duration: .9, ease: 'back.out(2)' }, 1.1);
 
     // ----- FUNDO DO HERO: luz (branco + vermelho) que segue o cursor; no toque ela passeia sozinha -----
     const fx = $('#heroFx');
@@ -615,17 +668,17 @@
 
       const hero = $('#hero');
       const shield = $('.formscene__shield');
-      const seal = $('.bseal__emblem');
+      const seals = $$('.bseal__emblem');
       hero.addEventListener('pointermove', (e) => {
         const r = hero.getBoundingClientRect();
         const nx = (e.clientX - r.left) / r.width - .5;
         const ny = (e.clientY - r.top) / r.height - .5;
         if (shield) gsap.to(shield, { x: nx * -26, y: ny * -18, duration: 1, ease: 'power3.out', overwrite: 'auto' });
-        if (seal) gsap.to(seal, { rotationY: nx * 16, rotationX: ny * -12, transformPerspective: 900, duration: .9, ease: 'power3.out', overwrite: 'auto' });
+        if (seals.length) gsap.to(seals, { rotationY: nx * 16, rotationX: ny * -12, transformPerspective: 900, duration: .9, ease: 'power3.out', overwrite: 'auto' });
       });
       hero.addEventListener('pointerleave', () => {
         if (shield) gsap.to(shield, { x: 0, y: 0, duration: 1.2, ease: 'power3.out' });
-        if (seal) gsap.to(seal, { rotationY: 0, rotationX: 0, duration: 1.2, ease: 'power3.out' });
+        if (seals.length) gsap.to(seals, { rotationY: 0, rotationX: 0, duration: 1.2, ease: 'power3.out' });
       });
 
       $$('[data-magnetic]').forEach((el) => {
@@ -651,7 +704,7 @@
 
     // ----- marquee: acelera com a velocidade do scroll -----
     const track = $('#marqueeTrack');
-    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 42, repeat: -1 }); // grupo ~2,4x mais largo (Esquenta Black): duração escala p/ manter a mesma velocidade
+    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 46, repeat: -1 }); // a duração acompanha a largura do grupo (linha da oferta + benefícios): se o texto do letreiro crescer/encolher, escale p/ manter a mesma velocidade (42 s com o texto "até 50%"; 46 s com "70% OFF… De/Por… 16/11")
     let ts = 1, dir = 1;
     ScrollTrigger.create({
       onUpdate: (self) => {
@@ -665,6 +718,7 @@
     const mm = gsap.matchMedia();
     mm.add('(min-width: 980px) and (min-height: 620px)', () => {
       const section = $('#estilos'), pin = $('#stylesPin'), rail = $('#stylesRail'), trackEl = $('#stylesTrack'), progress = $('#stylesBar');
+      if (!section) return; // página sem a seção de estilos (ex.: /black/)
       section.classList.add('is-hpin');
       const cs = () => getComputedStyle(rail);
       const dist = () => Math.max(0, trackEl.offsetWidth + parseFloat(cs().paddingLeft) + parseFloat(cs().paddingRight) - window.innerWidth);
@@ -683,6 +737,7 @@
     const stepEls = $$('.step');
     mm.add('(min-width: 900px)', () => {
       const road = $('#road'), bike = $('#bike'), lane = $('.road__lane i');
+      if (!road) return; // sem a estrada animada: os passos acendem pelo scroll (bloco abaixo)
       const draw = $$('.b-body path, .b-body circle, .b-tank-hi');
       gsap.set(draw, { strokeDashoffset: 1 });
       gsap.set(['.b-tank', '.b-seat'], { opacity: 0 });
@@ -713,7 +768,7 @@
 
       return () => { stepEls.forEach((el) => el.classList.remove('is-on')); };
     });
-    mm.add('(max-width: 899px)', () => {
+    mm.add($('#road') ? '(max-width: 899px)' : 'all', () => {
       const triggers = stepEls.map((el) => ScrollTrigger.create({
         trigger: el, start: 'top 68%', end: 'bottom 32%',
         onToggle: (s) => el.classList.toggle('is-on', s.isActive || s.progress === 1)
@@ -748,6 +803,7 @@
   function boot() {
     loadTracking();
     applyConfig();
+    initVehicle();
     initQuote();
     initWaModal();
     initFaq();
