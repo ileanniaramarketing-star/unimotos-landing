@@ -73,8 +73,11 @@ function status(veiculo) {
 async function pickSeller(sellers, veiculo) {
   const active = sellers.filter((s) => s.active);
   if (active.length <= 1) return active[0];
+  // vendedor que entrou depois: todos recomeçam do zero na data de entrada mais recente (sellers[].desde),
+  // senão o novato receberia TUDO até empatar com o histórico dos outros
+  const desde = active.map((s) => s.desde).filter((d) => d && !isNaN(Date.parse(d))).sort((a, b) => Date.parse(b) - Date.parse(a))[0];
   let counts = {};
-  try { counts = await store.countsBySeller(veiculo); } catch (e) { log('rodízio: não consegui ler o banco, sorteando aleatório entre todos:', e.message); }
+  try { counts = await store.countsBySeller(veiculo, desde); } catch (e) { log('rodízio: não consegui ler o banco, sorteando aleatório entre todos:', e.message); }
   const min = Math.min(...active.map((s) => counts[s.name] || 0));
   const leastLoaded = active.filter((s) => (counts[s.name] || 0) === min);
   return leastLoaded[Math.floor(Math.random() * leastLoaded.length)];

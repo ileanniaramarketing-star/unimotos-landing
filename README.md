@@ -11,6 +11,15 @@ Duas páginas de campanha, no mesmo visual da arte da campanha (vermelho e preto
 HTML/CSS/JS puros, sem dependências para instalar (GSAP e Lenis estão em `assets/vendor/`). Um servidor Node mínimo
 (`scripts/serve.js`) entrega as páginas e recebe o formulário em `/api/lead`, que encaminha o lead ao **Power CRM**.
 
+### Trocar a oferta da campanha (Esquenta Black)
+
+O texto da oferta é HTML fixo (não depende de JavaScript), então uma troca mexe nestes lugares — em `motos/` e `carros/`:
+
+- **Herói** (`#offer`): `.black__lead` (frase), `.black__deal` (preço *De* riscado → *Por*, com texto escondido para leitor de tela) e `.black__until` (prazo).
+- **Letreiro** (`#marqueeTrack`): 4 linhas iguais da oferta. Se o texto ficar mais longo/curto, ajuste a `duration` do letreiro em `js/main.js` (42 s com o texto antigo, 46 s com o atual) para manter a velocidade.
+- **Faixa do CTA final**: `.blackbar__deal` e `.blackbar__note` (onde vai a data de fechamento).
+- **Depois do prazo** (a oferta atual fecha em 16/11): trocar/retirar o texto de prazo; não há nada que apague a data sozinho.
+
 ## Como o lead chega ao CRM (e por que o token nunca vai ao navegador)
 
 ```
@@ -32,7 +41,7 @@ Navegador ──POST /api/lead──▶ servidor do site ──grava no Supabase
   função sozinho, dentro de menos de 1 segundo, sem o Node precisar esperar ou continuar rodando.
 - O WhatsApp abre em paralelo (resposta imediata do Node, sem esperar o Supabase): se o CRM estiver fora do ar, o lead não se perde para o cliente.
 - O servidor valida tudo de novo (nome, telefone BR, placa), tem isca anti-robô, limite por IP, anti-duplicidade e só aceita requisições da própria origem.
-- **Rodízio** entre Vitor e Kethlen (alternando, por veículo), `config/powercrm.json`. Quem decide o vendedor da vez é o **próprio site** (antes de gravar no Supabase) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
+- **Rodízio** entre Vitor, Kethlen e Fernanda (quem tem menos leads daquele veículo; empate no sorteio), `config/powercrm.json`. Para incluir alguém: ativar em `sellers[]` (nome, PowerLink `code`, `whatsapp`) **e** copiar na Edge Function (veja abaixo) — com `desde` na entrada para o rodízio recomeçar do zero para todos. Quem decide o vendedor da vez é o **próprio site** (antes de gravar no Supabase) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
 - Enquanto `config/powercrm.json` não estiver preenchido, o servidor só registra no log que o lead **não** foi ao CRM (`crm: not_configured` em `/api/health`).
   Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar — nunca grava `status: "pendente"`, então nunca aciona o webhook); só `POWERCRM_LIVE=1` faz o Node gravar pronto pra envio.
 - Detalhes de deploy, segredos e redeploy da função: `supabase/functions/send-lead/README.md`. Migração do gatilho: `supabase/migrations/0001_send_lead_webhook.sql`.
@@ -70,6 +79,13 @@ pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a co
   empate resolvido aleatoriamente — nunca fica 3×0 pra um lado, e funciona certinho mesmo logo depois de um reinício
   (diferente de um contador simples em arquivo, que reinicia do zero a cada deploy).
 - **Código da cotação/negociação do Power CRM**: quando o envio dá certo, o código que o Power CRM devolve (`quotationCode`/`negotiationCode`) fica guardado junto do lead no Supabase — dá pra usar depois pra conferir lá se aquele lead foi vendido.
+- **Conciliação com o Power CRM** (botão **"Conciliar com o Power CRM"** nas abas Leads e Relatórios): usa o código da negociação guardado em cada lead para buscar no CRM **onde ele está hoje** e grava no lead (colunas `crm_*`, migration `0005`):
+  - **Situação**: *Em andamento*, *Vendido* (data de envio ao Hinova, etapa "Vendas concretizadas" ou tag `ASSOCIADO`), *Descartado* ou *Não encontrado* (o CRM não tem mais a negociação). *Descartado* = negociação arquivada (motivo vem do arquivamento) **ou** tag `PERDIDO` (vendedor que marca sem arquivar; aparece com o selo "tag" e o motivo vem da tag `FECHOU EM OUTRA`/`SEM CONTATO`, senão "Sem motivo informado").
+  - **Etapa** (Cotação Recebida → Em negociação → Vistorias → Liberadas para cadastro → Vendas concretizadas), **vistoria**, **plano**, **mensalidade**, **adesão**, **rastreador**, **data da venda**, **tags** e **responsável** no CRM. Valores de cotação aparecem apagados até o lead ser vendido.
+  - **Relatórios → Funil de vendas · Power CRM**: leads, em andamento, vistorias, vendidos, descartados, taxa de venda, mensalidades e adesões vendidas, **por campanha / criativo / plataforma / veículo / vendedor**, mais etapas, motivos de descarte e tags. Respeita o filtro de período. Leads sem código do CRM (duplicados/falha de envio) ficam de fora do funil e isso é dito na tela.
+  - **Como roda**: só **lê** o Power CRM (`POST /api/report/db/paginated` em blocos de 15 dias + `GET /api/negotiation/{código}` para o nome da etapa) e grava só colunas `crm_*` dos leads; dado pessoal do relatório do CRM (clientes, CPF dos vendedores) nunca é guardado. Pega os leads dos últimos 90 dias, os nunca conferidos e os ainda em andamento. Não roda sozinha: é o botão. Pode demorar até ~1 minuto (limite de 100 s; se estourar, avisa "parcial" e é só clicar de novo). Duas pessoas não rodam ao mesmo tempo (a segunda recebe aviso). Regras (janela, etapas que contam como venda, tags) em `config/powercrm.json` → `conciliacao`.
+  - Precisa de `POWERCRM_TOKEN` **e** `SUPABASE_SERVICE_KEY` nas variáveis de ambiente do servidor. Sem token o botão fica desligado com o aviso; sem a migration `0005` aplicada a tela avisa. Código: `scripts/lib/crmsync.js` (regras e CRM), `scripts/lib/store.js` (gravação e funil), rota `GET/POST /api/painel/crm-sync` em `scripts/serve.js`.
+  - Filtro **"Situação no CRM"** na aba Leads e no CSV (que também traz todas as colunas do CRM).
 - **Gerenciar vendedores** (adicionar/remover do rodízio) continua sendo em `config/powercrm.json`, não tem tela pra isso ainda.
 - Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
   cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
@@ -140,7 +156,7 @@ carros/index.html   LP de carros
 painel/             painel interno (login + leads + relatórios) — ver seção acima
 css/style.css       visual, layout, animações
 js/config.js        ⭐ dados do cliente (PÚBLICO: nunca coloque token aqui)
-js/main.js          animações, formulário de cotação, eventos de conversão
+js/main.js          animações, formulário de cotação, eventos de conversão, troca Moto/Carro (data-vehicle-switch)
 assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo), partners/ (Grupo Zelo), vendor/ (GSAP + Lenis)
 config/powercrm.json  configuração NÃO secreta do CRM
 config/meta.json     configuração NÃO secreta do Meta Pixel/Conversions API

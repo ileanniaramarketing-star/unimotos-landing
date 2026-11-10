@@ -12,6 +12,13 @@
     failed: 'Falhou', duplicado: 'Duplicado', not_configured: 'CRM não configurado', no_token: 'CRM sem token'
   };
   const fmtDate = (ts) => new Date(ts).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const fmtDay = (ts) => new Date(ts).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
+  const BRL = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+  const fmtBrl = (n) => BRL.format(Number(n) || 0);
+  const fmtInt = (n) => Number(n || 0).toLocaleString('pt-BR');
+  const fmtPct = (x) => (Number(x || 0) * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '%';
+  // situação do lead no Power CRM (vem da conciliação). "pendente" = tem código do CRM mas ainda não foi conferido.
+  const SIT_LABEL = { aberto: 'Em andamento', ganho: 'Vendido', perdido: 'Descartado', nao_encontrado: 'Não encontrado', pendente: 'Não conciliado' };
   const fmtPhone = (e164) => { const d = String(e164 || '').replace(/\D/g, '').replace(/^55/, ''); return d.length >= 10 ? '(' + d.slice(0, 2) + ') ' + d.slice(2, -4) + '-' + d.slice(-4) : (e164 || ''); };
 
   /* ------------------------------------------------------------------ *
@@ -384,7 +391,7 @@
       new FormData(form).forEach((v, k) => { if (v) p.set(k, v); });
       return p;
     }
-    function cell(text) { const td = document.createElement('td'); td.textContent = text == null || text === '' ? '—' : text; return td; }
+    function cell(text, cls) { const td = document.createElement('td'); td.textContent = text == null || text === '' ? '—' : text; if (cls) td.className = cls; return td; }
     function statusBadge(status) {
       const td = document.createElement('td');
       const span = document.createElement('span');
@@ -392,6 +399,55 @@
       span.textContent = STATUS_LABEL[status] || status;
       td.appendChild(span);
       return td;
+    }
+    // texto longo que não deve alargar a tabela: corta com "…" e mostra inteiro ao passar o mouse
+    function truncCell(text, cls, small) {
+      const td = document.createElement('td');
+      if (cls) td.className = cls;
+      if (text == null || text === '') { td.textContent = '—'; td.classList.add('muted'); return td; }
+      const s = document.createElement('span'); s.className = 'trunc' + (small ? ' trunc--sm' : ''); s.textContent = text; s.title = text;
+      td.appendChild(s);
+      return td;
+    }
+
+    // --- colunas que vêm da conciliação com o Power CRM ---
+    function situacaoOf(l) { return l.crm ? (l.crm.situacao || 'aberto') : (l.negotiationCode ? 'pendente' : null); }
+    function situacaoCell(l) {
+      const td = document.createElement('td'); td.className = 'col-crm-start';
+      const sit = situacaoOf(l);
+      if (!sit) { td.textContent = '—'; td.classList.add('muted'); td.title = 'Sem código do CRM: o lead não chegou ao Power CRM.'; return td; }
+      const span = document.createElement('span');
+      span.className = 'status-badge sit-' + sit;
+      span.textContent = SIT_LABEL[sit];
+      if (sit === 'pendente') span.title = 'Ainda não conferido no Power CRM. Use "Conciliar com o Power CRM".';
+      else if (sit === 'nao_encontrado') span.title = 'O Power CRM não tem mais essa negociação.';
+      td.appendChild(span);
+      return td;
+    }
+    function etapaCell(l) {
+      const c = l.crm;
+      return truncCell(c && c.situacao !== 'nao_encontrado' ? c.etapa : '', '', true);
+    }
+    function motivoCell(l) {
+      const c = l.crm;
+      if (!c || c.situacao !== 'perdido') return cell('', 'muted');
+      const td = truncCell(c.motivo || 'Sem motivo informado');
+      const viaTag = c.perdaVia === 'tag';
+      td.title = [c.motivo, c.motivoObs, viaTag ? 'Marcado com a tag PERDIDO (o vendedor não arquivou a negociação)' : 'Arquivado no CRM' + (c.arquivadoEm ? ' em ' + fmtDay(c.arquivadoEm) : '')].filter(Boolean).join(' · ');
+      if (viaTag) { const v = document.createElement('span'); v.className = 'crm-via'; v.textContent = 'tag'; td.appendChild(v); }
+      return td;
+    }
+    // valores da cotação: ficam apagados enquanto o lead não foi vendido (não confundir com venda fechada)
+    function moneyCell(l, key) {
+      const c = l.crm, v = c && c[key];
+      if (v == null) return cell('', 'num muted');
+      const td = cell(fmtBrl(v), 'num' + (c.situacao === 'ganho' ? '' : ' muted'));
+      if (c.situacao !== 'ganho') td.title = 'Valor da cotação (o lead ainda não foi vendido).';
+      return td;
+    }
+    function vendaCell(l) {
+      const c = l.crm;
+      return c && c.vendaEm ? cell(fmtDay(c.vendaEm), 'crm-venda') : cell('', 'muted');
     }
     async function loadLeads() {
       const data = await api('/api/painel/leads?' + paramsFrom(leadsForm).toString());
@@ -403,8 +459,11 @@
         const tr = document.createElement('tr');
         tr.append(
           cell(fmtDate(l.ts)), cell(l.nome), cell(fmtPhone(l.telefone)), cell(l.placa), cell(l.veiculo === 'carro' ? 'Carro' : 'Moto'),
+          situacaoCell(l), etapaCell(l), motivoCell(l),
           cell(l.origem_form === 'whatsapp' ? 'Pop-up WhatsApp' : 'Site'), cell(l.cta), cell(l.utm_source), cell(l.utm_medium), cell(l.utm_campaign), cell(l.utm_content), cell(l.utm_term), cell(l.placement), cell(l.keyword), cell(l.act_id), cell(l.utm_id), cell(l.gclid), cell(l.fbclid),
-          cell(l.seller), statusBadge(l.status)
+          cell(l.seller), statusBadge(l.status),
+          truncCell(l.crm && l.crm.plano, 'col-crm-start', true), moneyCell(l, 'mensalidade'), moneyCell(l, 'adesao'), vendaCell(l),
+          truncCell(l.crm && l.crm.tags && l.crm.tags.length ? l.crm.tags.join(' · ') : '', '', true)
         );
         body.appendChild(tr);
       }
@@ -451,8 +510,222 @@
       renderList('#repOrigem', data.porOrigemCrm);
       renderList('#repVendedor', data.porVendedor);
       renderList('#repStatus', data.porStatus, data.total);
+      lastReport = data;
+      renderFunil(data);
     }
     reportForm.addEventListener('submit', (e) => { e.preventDefault(); loadReports().catch(() => {}); });
+
+    /* ---------------------------------------------------------------- *
+     * FUNIL DE VENDAS (Power CRM) — aba Relatórios
+     * ---------------------------------------------------------------- */
+    const DIM_LABEL = { campanha: 'Campanha', criativo: 'Criativo', plataforma: 'Plataforma', veiculo: 'Veículo', vendedor: 'Vendedor' };
+    let lastReport = null, funilDim = 'campanha';
+    const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+    const plural = (n, um, varios) => fmtInt(n) + ' ' + (n === 1 ? um : varios);
+    const pctOf = (n, d) => (d ? fmtPct(n / d) : '—');
+    function setMoney(id, v) { const n = $(id); n.textContent = ''; n.append(el('small', '', 'R$'), document.createTextNode(' ' + fmtBrl(v).replace(/^R\$\s?/, ''))); }
+
+    function renderFunilRows() {
+      if (!lastReport) return;
+      const rows = (lastReport.funilPor && lastReport.funilPor[funilDim]) || [];
+      $('#funilColLabel').textContent = DIM_LABEL[funilDim];
+      const tb = $('#funilBodyRows'); tb.textContent = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const lab = el('td', 'sticky-col');
+        const txt = funilDim === 'veiculo' ? (r.label === 'carro' ? 'Carro' : r.label === 'moto' ? 'Moto' : r.label) : r.label;
+        const s = el('span', 'label', txt); s.title = txt; lab.appendChild(s);
+        const num = (text, cls) => el('td', 'num' + (cls ? ' ' + cls : ''), text);
+        const count = (v) => num(fmtInt(v), v ? '' : 'is-zero');           // zero fica apagado
+        const win = (v, text) => num(text, v ? 'is-win' : 'is-zero');      // vendas em verde
+        tr.append(
+          lab, num(fmtInt(r.leads)), count(r.abertos), count(r.vistorias), win(r.ganhos, fmtInt(r.ganhos)), count(r.perdidos),
+          win(r.ganhos, pctOf(r.ganhos, r.leads)),
+          win(r.mensalidades, r.mensalidades ? fmtBrl(r.mensalidades) : '—'), win(r.adesoes, r.adesoes ? fmtBrl(r.adesoes) : '—')
+        );
+        tb.appendChild(tr);
+      }
+    }
+
+    function renderFunil(data) {
+      const f = data.funil || {};
+      const empty = $('#funilEmpty'), bodyEl = $('#funilBody');
+      const conc = f.conciliados || 0, leads = f.leads || 0;
+      const naoEnc = f.naoEncontrados || 0, pend = Math.max(0, leads - conc - naoEnc);
+      // nada para mostrar: ou ninguém chegou ao CRM no período, ou ainda não foi conciliado
+      if (!leads || (!conc && !naoEnc)) {
+        bodyEl.hidden = true; empty.hidden = false; empty.textContent = '';
+        if (!leads) { empty.append(el('b', '', 'Nenhum lead com código do Power CRM neste período.'), document.createTextNode('Só entram aqui leads que foram enviados ao CRM com sucesso.')); }
+        else { empty.append(el('b', '', plural(leads, 'lead aguarda', 'leads aguardam') + ' a primeira conciliação.'), document.createTextNode('Clique em "Conciliar com o Power CRM" para trazer a etapa, o descarte (com motivo) e a venda de cada um.')); }
+        return;
+      }
+      empty.hidden = true; bodyEl.hidden = false;
+
+      $('#kLeads').textContent = fmtInt(leads);
+      $('#kLeadsSub').textContent = !naoEnc && !pend ? 'todos conciliados' : [fmtInt(conc) + ' conciliados', naoEnc ? fmtInt(naoEnc) + ' não encontrados' : '', pend ? fmtInt(pend) + ' pendentes' : ''].filter(Boolean).join(' · ');
+      $('#kAbertos').textContent = fmtInt(f.abertos);
+      $('#kAbertosSub').textContent = pctOf(f.abertos, conc) + ' dos conciliados';
+      $('#kVistorias').textContent = fmtInt(f.vistorias);
+      $('#kVistoriasSub').textContent = pctOf(f.vistorias, conc) + ' dos conciliados';
+      $('#kPerdidos').textContent = fmtInt(f.perdidos);
+      $('#kPerdidosSub').textContent = pctOf(f.perdidos, conc) + ' dos conciliados';
+      $('#kGanhos').textContent = fmtInt(f.ganhos);
+      $('#kGanhosSub').textContent = pctOf(f.ganhos, conc) + ' dos conciliados';
+      $('#kTaxa').textContent = fmtPct(f.taxaVenda);
+      setMoney('#kMensal', f.mensalidades); setMoney('#kAdesao', f.adesoes);
+
+      // barra de situação (cada trecho com o nome e o número na legenda)
+      const parts = [
+        ['Vendidos', f.ganhos, '#28be6e'], ['Em andamento', f.abertos, '#789aff'], ['Descartados', f.perdidos, '#e5484d'],
+        ['Não encontrados no CRM', naoEnc, '#6d6d75'], ['Ainda não conciliados', pend, '#3a3a40']
+      ].filter((p) => p[1] > 0);
+      const bar = $('#sitBarBar'), legend = $('#sitBarLegend'); bar.textContent = ''; legend.textContent = '';
+      bar.setAttribute('aria-label', 'Situação dos leads no CRM: ' + parts.map((p) => fmtInt(p[1]) + ' ' + p[0].toLowerCase()).join(', '));
+      for (const [label, n, color] of parts) {
+        const seg = document.createElement('i'); seg.style.flex = n + ' 1 0'; seg.style.setProperty('--c', color); seg.title = label + ': ' + fmtInt(n); bar.appendChild(seg);
+        const li = el('span'); li.style.setProperty('--c', color); li.append(document.createTextNode(label + ' '), el('b', '', fmtInt(n))); legend.appendChild(li);
+      }
+
+      renderFunilRows();
+
+      // o que ficou de fora das contas, dito com todas as letras
+      const notes = [];
+      if (f.semCodigo) notes.push(plural(f.semCodigo, 'lead não chegou', 'leads não chegaram') + ' ao Power CRM (sem código: duplicado ou falha de envio) e ficam fora do funil');
+      if (pend) notes.push(plural(pend, 'lead ainda não foi conciliado', 'leads ainda não foram conciliados') + ' (clique em Conciliar)');
+      if (naoEnc) notes.push(plural(naoEnc, 'lead não foi encontrado', 'leads não foram encontrados') + ' no Power CRM (negociação apagada lá?)');
+      $('#funilNota').textContent = notes.length ? notes.join(' · ') + '.' : '';
+
+      renderList('#repEtapaCrm', data.porEtapaCrm || [], conc);
+      renderList('#repMotivoCrm', data.porMotivoCrm || [], f.perdidos);
+      renderList('#repTagCrm', data.porTagCrm || []);
+    }
+    $$('#funilDim button').forEach((b) => b.addEventListener('click', () => {
+      funilDim = b.getAttribute('data-dim');
+      $$('#funilDim button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      renderFunilRows();
+    }));
+
+    /* ---------------------------------------------------------------- *
+     * BOTÃO "Conciliar com o Power CRM" (aparece em Leads e em Relatórios)
+     * O servidor busca no CRM a etapa/descarte/venda de cada lead e grava
+     * nos leads; aqui só disparamos, mostramos o andamento e o resultado.
+     * ------------------------------------------------------------------ */
+    const crm = (() => {
+      const bars = $$('[data-crm-bar]');
+      const results = $$('[data-crm-result]');
+      const SYNC_ERR = {
+        no_token: 'O token do Power CRM ainda não foi configurado no servidor.',
+        em_andamento: 'Já existe uma conciliação rodando agora (talvez iniciada por outra pessoa). Aguarde ela terminar.',
+        crm_auth: 'O Power CRM recusou o acesso (token inválido ou expirado). Confira o token no servidor.',
+        crm_indisponivel: 'O Power CRM não respondeu agora. Tente de novo em alguns minutos.',
+        store_unavailable: 'Não deu para acessar o banco de leads agora. Tente de novo.',
+        migration_pendente: 'O banco ainda não tem as colunas da conciliação (migration 0005). Aplique-a antes de conciliar.',
+        forbidden: 'O servidor recusou o pedido. Recarregue a página e tente de novo.',
+        unsupported_media_type: 'O servidor recusou o pedido. Recarregue a página e tente de novo.'
+      };
+      let st = null, busy = false;
+
+      function render() {
+        const running = busy || (st && st.emAndamento);
+        let info;
+        if (!st) info = 'Não deu para verificar a última conciliação.';
+        else if (!st.configurado) info = 'O token do Power CRM ainda não foi configurado no servidor.';
+        else if (running) info = 'Conciliando com o Power CRM… pode levar até 1 minuto.';
+        else if (!st.elegiveis) info = 'Nenhum lead com código do CRM ainda.';
+        else if (!st.ultima) info = plural(st.elegiveis, 'lead com código do CRM ainda não conciliado.', 'leads com código do CRM ainda não conciliados.');
+        else info = 'Última conciliação: ' + fmtDate(st.ultima) + ' · ' + fmtInt(st.conciliados) + ' de ' + fmtInt(st.elegiveis) + ' leads conciliados';
+        for (const b of bars) {
+          $('[data-crm-info]', b).textContent = info;
+          const btn = $('[data-crm-btn]', b);
+          btn.disabled = !!running || !st || !st.configurado;
+          btn.classList.toggle('is-busy', !!running);
+          btn.setAttribute('aria-busy', String(!!running));
+          $('[data-crm-label]', b).textContent = running ? 'Conciliando…' : 'Conciliar com o Power CRM';
+        }
+      }
+      function show(kind, parts) { // parts: [{ b?: texto em destaque, t: texto }] ou string
+        for (const r of results) {
+          r.textContent = ''; r.className = 'crm-result crm-result--' + kind; r.hidden = false;
+          const [head, ...items] = Array.isArray(parts) ? parts : [parts];
+          r.append(el('b', '', head));
+          if (items.length) { const ul = document.createElement('ul'); for (const t of items) ul.appendChild(el('li', '', t)); r.appendChild(ul); }
+        }
+      }
+      const hide = () => results.forEach((r) => { r.hidden = true; });
+
+      async function refresh() {
+        try {
+          const r = await fetch('/api/painel/crm-sync', { headers: { Accept: 'application/json' } });
+          if (r.status === 401) { location.href = '/painel/login'; return; }
+          st = r.ok ? await r.json() : null;
+          if (!r.ok && r.status === 503) { const d = await r.json().catch(() => ({})); if (d.error === 'migration_pendente') show('erro', SYNC_ERR.migration_pendente); }
+        } catch (e) { st = null; }
+        render();
+        // outra pessoa está conciliando: acompanha até terminar (o botão volta sozinho)
+        if (st && st.emAndamento && !busy) setTimeout(refresh, 5000);
+      }
+
+      function summary(d) {
+        const seg = Math.max(1, Math.round((d.duracaoMs || 0) / 1000));
+        // o CRM não respondeu para nada: não é "concluída", é uma falha (os leads ficam como estavam)
+        const failedAll = !d.conciliados && !d.naoEncontrados && ((d.diasComFalha && d.diasComFalha.length) || d.semResposta);
+        const head = failedAll ? 'Não foi possível conciliar agora' : d.simulacao ? 'Simulação concluída (nada foi gravado)' : 'Conciliação concluída em ' + seg + ' s';
+        const m = d.mudancas || {};
+        const lines = [];
+        if (!failedAll) lines.push(plural(d.conciliados, 'lead conferido', 'leads conferidos') + ' no Power CRM · ' + (d.atualizados ? plural(d.atualizados, 'atualizado', 'atualizados') : 'nenhuma mudança') + (d.inalterados ? ' · ' + plural(d.inalterados, 'sem mudança', 'sem mudança') : ''));
+        const news = [];
+        if (m.novosGanhos) news.push(plural(m.novosGanhos, 'novo vendido', 'novos vendidos'));
+        if (m.novosDescartes) news.push(plural(m.novosDescartes, 'novo descartado', 'novos descartados'));
+        if (m.mudaramDeEtapa) news.push(plural(m.mudaramDeEtapa, 'mudou de etapa', 'mudaram de etapa'));
+        if (news.length) lines.push('Desde a última vez: ' + news.join(' · '));
+        const warn = [];
+        if (d.parcial) warn.push('O tempo acabou antes de conferir tudo. Clique em Conciliar de novo para continuar.');
+        if (d.diasComFalha && d.diasComFalha.length) warn.push('O Power CRM não respondeu para ' + plural(d.diasComFalha.length, 'dia', 'dias') + ' do período; os leads desses dias ficaram como estavam.');
+        if (d.semResposta) warn.push(plural(d.semResposta, 'lead não pôde ser verificado', 'leads não puderam ser verificados') + ' agora. Tente de novo em instantes.');
+        if (d.naoEncontrados) warn.push(plural(d.naoEncontrados, 'lead não existe mais', 'leads não existem mais') + ' no Power CRM (aparecem como "Não encontrado").');
+        show(failedAll ? 'erro' : warn.length ? 'aviso' : 'ok', [head].concat(lines, warn));
+      }
+
+      // a conexão pode cair antes do fim (o servidor continua trabalhando): espera ele terminar e avisa
+      async function waitServer(msgIfDone) {
+        const until = Date.now() + 150000;
+        while (Date.now() < until) {
+          await new Promise((r) => setTimeout(r, 4000));
+          try {
+            const r = await fetch('/api/painel/crm-sync', { headers: { Accept: 'application/json' } });
+            if (r.status === 401) { location.href = '/painel/login'; return false; }
+            const d = r.ok ? await r.json() : null;
+            if (d && !d.emAndamento) { st = d; show('aviso', msgIfDone); return true; }
+          } catch (e) { /* tenta de novo */ }
+        }
+        show('aviso', 'A conciliação ainda está rodando no servidor. Atualize a página em alguns instantes.');
+        return false;
+      }
+
+      async function run() {
+        if (busy || !st || !st.configurado) return;
+        busy = true; hide(); render();
+        let status = 0, data = null;
+        try {
+          const r = await fetch('/api/painel/crm-sync', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}' });
+          if (r.status === 401) { location.href = '/painel/login'; return; }
+          status = r.status; data = await r.json().catch(() => null);
+        } catch (e) { /* cai no bloco "sem resposta" abaixo */ }
+        let finished = true;
+        if (data && data.ok) summary(data);
+        else if (data && data.error === 'em_andamento') finished = await waitServer('A conciliação que já estava rodando terminou. Os dados abaixo estão atualizados.');
+        else if (data && data.error) show('erro', SYNC_ERR[data.error] || ('Não deu para conciliar agora (erro ' + status + ').'));
+        else finished = await waitServer('A conexão caiu antes do fim, mas o servidor terminou a conciliação. Os dados abaixo estão atualizados.');
+        busy = false;
+        await refresh();
+        if (finished) { loadLeads().catch(() => {}); if (!panels.relatorios.hidden) loadReports().catch(() => {}); }
+      }
+
+      for (const b of bars) $('[data-crm-btn]', b).addEventListener('click', run);
+      render();
+      refresh();
+      return { refresh };
+    })();
 
     loadLeads().catch(() => { countEl.textContent = 'Não deu para carregar os leads agora.'; });
   }

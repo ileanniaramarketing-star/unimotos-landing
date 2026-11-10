@@ -21,7 +21,8 @@ const POWERCRM_CONFIG = {
   origins: { default: 2424, social: 625, google: 624 },
   sellers: [
     { name: "Vitor", code: "ArzMy08D" },
-    { name: "Kethlen", code: "orgpm2mE" }
+    { name: "Kethlen", code: "orgpm2mE" },
+    { name: "Fernanda", code: "9qwXjdYD" }
     // "Ilean (teste)" fica de fora de propósito: inativa, nunca deve receber lead
   ],
   products: {

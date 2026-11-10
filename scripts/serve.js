@@ -15,6 +15,7 @@ const { processPageView } = require('./lib/pageview');
 const { status: crmStatus } = require('./lib/powercrm');
 const auth = require('./lib/auth');
 const store = require('./lib/store');
+const crmsync = require('./lib/crmsync');
 const disparo = require('./lib/disparo');
 const zapi = require('./lib/zapi');
 
@@ -90,6 +91,10 @@ function parseDateParam(v, edge) {
   return Number.isFinite(t) ? t : undefined;
 }
 
+// "Situação no CRM" aceita no filtro das listas (qualquer outro valor é ignorado)
+const SITUACOES = ['aberto', 'ganho', 'perdido', 'nao_encontrado', 'pendente'];
+const situacaoParam = (v) => (SITUACOES.includes(v) ? v : undefined);
+
 async function api(req, res, p) {
   if (p === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, crm: crmStatus().state });
   if (p === '/api/lead') {
@@ -143,12 +148,34 @@ async function api(req, res, p) {
     if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
     if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
     const q = new URL(req.url, 'http://x').searchParams;
-    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to'), limit: q.get('limit') || undefined };
+    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, situacao: situacaoParam(q.get('situacao')), q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to'), limit: q.get('limit') || undefined };
     try {
       if (p === '/api/painel/leads') return json(res, 200, Object.assign({ ok: true }, await store.listLeads(filters)));
       return json(res, 200, Object.assign({ ok: true }, await store.aggregate(filters)));
     } catch (e) {
       console.error('[painel] erro ao consultar o Supabase:', e.message);
+      if (store.isSchemaMissing(e)) return json(res, 503, { ok: false, error: 'migration_pendente' });
+      return json(res, 502, { ok: false, error: 'store_unavailable' });
+    }
+  }
+
+  // Conciliação com o Power CRM (botão "Conciliar com o Power CRM"). GET = estado da última conciliação;
+  // POST = roda agora (busca etapa/descarte/venda de cada lead no CRM e grava nos leads; só LÊ do CRM).
+  if (p === '/api/painel/crm-sync') {
+    if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
+    if (req.method === 'POST') {
+      if (!sameOrigin(req)) return json(res, 403, { ok: false, error: 'forbidden' });
+      if (!/^application\/json/i.test(req.headers['content-type'] || '')) return json(res, 415, { ok: false, error: 'unsupported_media_type' });
+    } else if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+    try {
+      if (req.method === 'GET') return json(res, 200, Object.assign({ ok: true }, await crmsync.status()));
+      const out = await crmsync.reconcile();
+      const code = out.status || 200;
+      delete out.status;
+      return json(res, code, out);
+    } catch (e) {
+      console.error('[painel] erro na conciliação:', e.message);
+      if (store.isSchemaMissing(e)) return json(res, 503, { ok: false, error: 'migration_pendente' });
       return json(res, 502, { ok: false, error: 'store_unavailable' });
     }
   }
@@ -158,7 +185,7 @@ async function api(req, res, p) {
     if (req.method !== 'GET') return json(res, 405, { ok: false, error: 'method_not_allowed' });
     if (!auth.isAuthenticated(req)) return json(res, 401, { ok: false, error: 'not_authenticated' });
     const q = new URL(req.url, 'http://x').searchParams;
-    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to') };
+    const filters = { veiculo: q.get('veiculo') || undefined, status: q.get('status') || undefined, situacao: situacaoParam(q.get('situacao')), q: q.get('q') || undefined, from: parseDateParam(q.get('from')), to: parseDateParam(q.get('to'), 'to') };
     try {
       const csv = await store.exportCsv(filters);
       const nome = 'leads-' + new Date().toISOString().slice(0, 10) + '.csv';

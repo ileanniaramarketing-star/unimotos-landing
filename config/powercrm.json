@@ -1,5 +1,5 @@
 {
-  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. API: POST /api/quotation/add (validado em 25/09/2026 com uma cotação de teste). A cotação entra na coluna 'Cotação Recebida' do funil, atribuída ao consultor cujo PowerLink está em sellers[].code. Rodízio: Vitor e Kethlen (PowerLinks obtidos por POST /api/consultant/powerlink). Falta só decidir a cooperativa das motos e o UTM/tags. ATENÇÃO: desde 30/09/2026 o ENVIO de verdade ao Power CRM roda no Supabase (Edge Function supabase/functions/send-lead/), que tem uma CÓPIA MANUAL deste vendedores/PowerLink/cidade/cooperativa dentro de index.ts — qualquer mudança aqui (novo vendedor, PowerLink trocado, cidade/coop de um produto) precisa ser replicada lá e redeployada (ver supabase/functions/send-lead/README.md). Este arquivo continua sendo a fonte da verdade para o rodízio (Node) e para o preview do dry-run.",
+  "_nota": "Configuração NÃO secreta do Power CRM (pode ir para o Git). O token fica no cofre (POWERCRM_TOKEN), nunca aqui. API: POST /api/quotation/add (validado em 25/09/2026 com uma cotação de teste). A cotação entra na coluna 'Cotação Recebida' do funil, atribuída ao consultor cujo PowerLink está em sellers[].code. Rodízio: Vitor, Kethlen e Fernanda (PowerLinks obtidos por POST /api/consultant/powerlink). sellers[].desde (opcional): quando um vendedor entra no meio da operação, o rodízio passa a contar os leads só a partir da data mais recente de 'desde' entre os ativos — todos recomeçam do zero juntos; sem isso o novato receberia TODOS os leads até empatar com o histórico dos outros. Falta só decidir a cooperativa das motos e o UTM/tags. ATENÇÃO: desde 30/09/2026 o ENVIO de verdade ao Power CRM roda no Supabase (Edge Function supabase/functions/send-lead/), que tem uma CÓPIA MANUAL deste vendedores/PowerLink/cidade/cooperativa dentro de index.ts — qualquer mudança aqui (novo vendedor, PowerLink trocado, cidade/coop de um produto) precisa ser replicada lá e redeployada (ver supabase/functions/send-lead/README.md). Este arquivo continua sendo a fonte da verdade para o rodízio (Node) e para o preview do dry-run.",
   "baseUrl": "https://api.powercrm.com.br",
   "auth": {
     "header": "Authorization",
@@ -20,6 +20,13 @@
       "code": "orgpm2mE",
       "active": true,
       "whatsapp": "5531983156221"
+    },
+    {
+      "name": "Fernanda",
+      "code": "9qwXjdYD",
+      "active": true,
+      "whatsapp": "5531995056039",
+      "desde": "2026-11-10T19:05:00-03:00"
     },
     {
       "name": "Ilean (teste)",
@@ -62,7 +69,7 @@
       "Betim": 1636,
       "Ribeirão das Neves": 2201
     },
-    "consultores": "Vitor Torres Braga Moura (Consultor) = ArzMy08D; Kethlen Oliveira Peixoto (Vendedor) = orgpm2mE; Ilean (teste, inativa) = vrXbVKeq. PowerLink obtido por POST /api/consultant/powerlink {email} (o e-mail NÃO é guardado aqui).",
+    "consultores": "Vitor Torres Braga Moura (Consultor) = ArzMy08D; Kethlen Oliveira Peixoto (Vendedor) = orgpm2mE; Fernanda = 9qwXjdYD; Ilean (teste, inativa) = vrXbVKeq. PowerLink obtido por POST /api/consultant/powerlink {email} (o e-mail NÃO é guardado aqui).",
     "placa": "GET /api/quotation/plates/{plate} devolve os dados do veículo (pode preencher mdl/mdlYr sem o cliente escolher)",
     "mover": "POST /api/quotation/card/move?cardColumn=&quotationCode= move o card de coluna do funil",
     "naoUsar": "/api/powerbi/* devolve dados de MUITAS empresas com este token; não consultar",
@@ -83,5 +90,18 @@
     "default": 2424,
     "social": 625,
     "google": 624
+  },
+  "conciliacao": {
+    "_nota": "Regras do botão 'Conciliar com o Power CRM' do painel (scripts/lib/crmsync.js). Nomes de etapa e tags são comparados sem acento e sem diferenciar maiúsculas. VENDIDO = etapa em etapasGanho OU enviado ao Hinova/SGA OU alguma tag de tagsGanho. DESCARTADO = arquivado no CRM (motivo oficial = shelvedReason) OU alguma tag de tagsPerda (os vendedores marcam PERDIDO sem arquivar; o motivo então sai de motivosPorTag, senão fica 'SEM MOTIVO INFORMADO'). Todo o resto = em andamento. janelaDias: leads mais antigos que isso só são reconferidos se ainda estiverem em andamento. blocoDias: tamanho do pedaço de datas pedido ao relatório do CRM (janelas grandes dão HTTP 502).",
+    "janelaDias": 90,
+    "blocoDias": 15,
+    "etapasConhecidas": { "1": "Cotação Recebida", "2": "Em negociação", "3": "Vistorias", "4": "Liberadas para cadastro", "5": "Vendas concretizadas" },
+    "etapasGanho": ["Vendas concretizadas"],
+    "tagsGanho": ["ASSOCIADO"],
+    "tagsPerda": ["PERDIDO"],
+    "motivosPorTag": {
+      "FECHOU EM OUTRA": "FECHOU EM OUTRA",
+      "SEM CONTATO": "SEM CONTATO"
+    }
   }
 }

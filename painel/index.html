@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=bdce69c5">
-  <link rel="stylesheet" href="/painel/painel.css?v=cf8b4f5d">
+  <link rel="stylesheet" href="/painel/painel.css?v=64d8ab7d">
 </head>
 <body class="painel-shell">
   <header class="painel-top">
@@ -41,7 +41,18 @@
           </select>
         </div>
         <div>
-          <label for="fStatus">Status</label>
+          <label for="fSituacao">Situação no CRM</label>
+          <select id="fSituacao" name="situacao">
+            <option value="">Todas</option>
+            <option value="aberto">Em andamento</option>
+            <option value="ganho">Vendido</option>
+            <option value="perdido">Descartado</option>
+            <option value="nao_encontrado">Não encontrado no CRM</option>
+            <option value="pendente">Ainda não conciliado</option>
+          </select>
+        </div>
+        <div>
+          <label for="fStatus">Status do envio</label>
           <select id="fStatus" name="status">
             <option value="">Todos</option>
             <option value="sent">Enviado</option>
@@ -66,17 +77,34 @@
           <input id="fAte" name="to" type="date">
         </div>
         <div><button type="submit">Filtrar</button></div>
-        <div><a class="painel-export" id="leadsExport" href="/api/painel/leads.csv" download title="Baixa TODOS os leads do filtro ao lado (não só os da tela), com todas as colunas: dados do lead, UTMs, vendedor e status do CRM. Abre direto no Excel ou Google Sheets.">Baixar dados brutos (CSV)</a></div>
       </form>
 
-      <p class="painel-count" id="leadsCount"></p>
+      <!-- Conciliação: traz do Power CRM a etapa, o descarte (com motivo) e a venda de cada lead -->
+      <div class="crm-bar" data-crm-bar>
+        <div class="crm-bar__txt">
+          <b>Power CRM</b>
+          <span data-crm-info role="status" aria-live="polite">Verificando a última conciliação…</span>
+        </div>
+        <button type="button" class="crm-btn" data-crm-btn title="Busca no Power CRM a etapa, o descarte (com motivo) e a venda de cada lead que já foi enviado para lá. Só lê o CRM; nada é alterado nele.">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M16 16h5v5"/></svg>
+          <span data-crm-label>Conciliar com o Power CRM</span>
+        </button>
+      </div>
+      <p class="crm-result" data-crm-result role="status" aria-live="polite" hidden></p>
+
+      <div class="painel-listbar">
+        <p class="painel-count" id="leadsCount"></p>
+        <a class="painel-export" id="leadsExport" href="/api/painel/leads.csv" download title="Baixa TODOS os leads do filtro acima (não só os da tela), com todas as colunas: dados do lead, UTMs, vendedor, status do envio e, se já conciliado, a situação no Power CRM. Abre direto no Excel ou Google Sheets.">Baixar dados brutos (CSV)</a>
+      </div>
       <div class="painel-table-wrap">
-        <table class="painel-table" id="leadsTable">
+        <table class="painel-table painel-table--leads" id="leadsTable">
           <thead>
             <tr>
               <th>Data</th><th>Nome</th><th>Telefone</th><th>Placa</th><th>Veículo</th>
+              <th class="col-crm-start">Situação no CRM</th><th>Etapa no CRM</th><th>Motivo do descarte</th>
               <th>Formulário</th><th>Botão (CTA)</th><th>Plataforma</th><th>Meio</th><th>Campanha</th><th>Criativo</th><th>Termo</th><th>Posicionamento</th><th>Palavra-chave</th><th>Conta (act_id)</th><th>UTM ID</th><th>GCLID</th><th>FBCLID</th>
-              <th>Vendedor</th><th>Status</th>
+              <th>Vendedor</th><th>Status do envio</th>
+              <th class="col-crm-start">Plano (CRM)</th><th class="num">Mensalidade</th><th class="num">Adesão</th><th>Venda em</th><th>Tags (CRM)</th>
             </tr>
           </thead>
           <tbody id="leadsBody"></tbody>
@@ -99,6 +127,79 @@
         <div><button type="submit">Filtrar</button></div>
       </form>
 
+      <!-- ===== Funil de vendas (dados conciliados do Power CRM, cruzados com a campanha de origem) ===== -->
+      <section class="sec" id="funil" aria-labelledby="funilTitulo">
+        <div class="sec-head">
+          <h2 class="sec-title" id="funilTitulo">Funil de vendas · Power CRM</h2>
+          <p class="sec-sub">Etapa, descarte e venda de cada lead que chegou ao Power CRM, ligados à campanha de origem. Vale para o período escolhido acima.</p>
+        </div>
+
+        <div class="crm-bar" data-crm-bar>
+          <div class="crm-bar__txt">
+            <b>Power CRM</b>
+            <span data-crm-info role="status" aria-live="polite">Verificando a última conciliação…</span>
+          </div>
+          <button type="button" class="crm-btn" data-crm-btn>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-15.5-6.2L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15.5 6.2L21 16"/><path d="M16 16h5v5"/></svg>
+            <span data-crm-label>Conciliar com o Power CRM</span>
+          </button>
+        </div>
+        <p class="crm-result" data-crm-result role="status" aria-live="polite" hidden></p>
+
+        <p class="funil-empty" id="funilEmpty" hidden></p>
+
+        <div id="funilBody" hidden>
+          <dl class="kpis">
+            <div class="kpi"><dt>Leads no CRM</dt><dd class="kpi__v" id="kLeads">0</dd><dd class="kpi__sub" id="kLeadsSub"></dd></div>
+            <div class="kpi"><dt>Em andamento</dt><dd class="kpi__v" id="kAbertos">0</dd><dd class="kpi__sub" id="kAbertosSub"></dd></div>
+            <div class="kpi"><dt>Chegaram à vistoria</dt><dd class="kpi__v" id="kVistorias">0</dd><dd class="kpi__sub" id="kVistoriasSub"></dd></div>
+            <div class="kpi"><dt>Descartados</dt><dd class="kpi__v" id="kPerdidos">0</dd><dd class="kpi__sub" id="kPerdidosSub"></dd></div>
+            <div class="kpi kpi--win"><dt>Vendidos</dt><dd class="kpi__v" id="kGanhos">0</dd><dd class="kpi__sub" id="kGanhosSub"></dd></div>
+            <div class="kpi kpi--win"><dt>Taxa de venda</dt><dd class="kpi__v" id="kTaxa">0%</dd><dd class="kpi__sub">vendidos ÷ leads no CRM</dd></div>
+            <div class="kpi kpi--win"><dt>Mensalidades</dt><dd class="kpi__v" id="kMensal">R$ 0,00</dd><dd class="kpi__sub">soma mensal dos vendidos</dd></div>
+            <div class="kpi kpi--win"><dt>Adesões</dt><dd class="kpi__v" id="kAdesao">R$ 0,00</dd><dd class="kpi__sub">soma das adesões dos vendidos</dd></div>
+          </dl>
+
+          <div class="sitbar" id="sitBar">
+            <div class="sitbar__bar" id="sitBarBar" role="img" aria-label=""></div>
+            <div class="sitbar__legend" id="sitBarLegend"></div>
+          </div>
+
+          <div class="funil-tools">
+            <span class="funil-tools__label" id="funilDimLabel">Agrupar por</span>
+            <div class="seg" id="funilDim" role="group" aria-labelledby="funilDimLabel">
+              <button type="button" data-dim="campanha" aria-pressed="true">Campanha</button>
+              <button type="button" data-dim="criativo" aria-pressed="false">Criativo</button>
+              <button type="button" data-dim="plataforma" aria-pressed="false">Plataforma</button>
+              <button type="button" data-dim="veiculo" aria-pressed="false">Veículo</button>
+              <button type="button" data-dim="vendedor" aria-pressed="false">Vendedor</button>
+            </div>
+          </div>
+
+          <div class="painel-table-wrap">
+            <table class="painel-table funil-table" id="funilTable">
+              <thead>
+                <tr>
+                  <th class="sticky-col" id="funilColLabel">Campanha</th>
+                  <th class="num">Leads</th><th class="num">Em andamento</th><th class="num">Vistorias</th><th class="num">Vendidos</th><th class="num">Descartados</th><th class="num">Taxa de venda</th><th class="num">Mensalidades</th><th class="num">Adesões</th>
+                </tr>
+              </thead>
+              <tbody id="funilBodyRows"></tbody>
+            </table>
+          </div>
+          <p class="funil-note" id="funilNota"></p>
+
+          <div class="report-grid funil-cards">
+            <article class="report-card"><h3>Etapas no CRM</h3><div class="report-list" id="repEtapaCrm"></div></article>
+            <article class="report-card"><h3>Motivos de descarte</h3><div class="report-list" id="repMotivoCrm"></div></article>
+            <article class="report-card"><h3>Tags do CRM</h3><div class="report-list" id="repTagCrm"></div></article>
+          </div>
+        </div>
+      </section>
+
+      <div class="sec-head sec-head--plain">
+        <h2 class="sec-title">Origem dos leads</h2>
+      </div>
       <div class="report-grid">
         <article class="report-card">
           <h3>Total de leads</h3>
@@ -126,7 +227,7 @@
         <article class="report-card"><h3>Por conta de anúncio</h3><div class="report-list" id="repConta"></div></article>
         <article class="report-card"><h3>Por origem (Power CRM)</h3><div class="report-list" id="repOrigem"></div></article>
         <article class="report-card"><h3>Por vendedor</h3><div class="report-list" id="repVendedor"></div></article>
-        <article class="report-card"><h3>Por status</h3><div class="report-list" id="repStatus"></div></article>
+        <article class="report-card"><h3>Por status do envio</h3><div class="report-list" id="repStatus"></div></article>
       </div>
     </section>
 
@@ -197,6 +298,6 @@
     </section>
   </main>
 
-  <script src="/painel/painel.js?v=0c116169" defer></script>
+  <script src="/painel/painel.js?v=a84771b0" defer></script>
 </body>
 </html>

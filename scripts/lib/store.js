@@ -22,6 +22,10 @@ const key = () => process.env.SUPABASE_SERVICE_KEY || '';
 const redact = (s) => { const k = key(); return k ? String(s).split(k).join('[REDACTED]') : String(s); };
 const log = (...a) => console.error('[store]', ...a.map((x) => redact(typeof x === 'string' ? x : JSON.stringify(x))));
 
+// Retrato do lead no Power CRM, gravado pela conciliação (scripts/lib/crmsync.js; colunas criadas em
+// supabase/migrations/0005_leads_crm_conciliacao.sql). crm_sync_em = quando foi conferido pela última vez (NULL = nunca).
+const CRM_COLS = ['crm_situacao', 'crm_etapa', 'crm_etapa_cod', 'crm_motivo', 'crm_motivo_obs', 'crm_perda_via', 'crm_arquivado_em', 'crm_tags', 'crm_responsavel', 'crm_plano', 'crm_tabela', 'crm_mensalidade', 'crm_adesao', 'crm_rastreador', 'crm_vistoria_em', 'crm_venda_em'];
+
 function loadCfg() { return JSON.parse(fs.readFileSync(CFG_PATH, 'utf8')); }
 function restUrl(p) { return loadCfg().url.replace(/\/+$/, '') + '/rest/v1' + p; }
 
@@ -34,6 +38,8 @@ async function sb(p, opts) {
   return res;
 }
 
+const num = (v) => (v == null ? undefined : Number(v));
+
 // linha do banco (colunas em português) -> objeto que o resto do código/painel já espera
 function fromRow(r) {
   return {
@@ -43,8 +49,23 @@ function fromRow(r) {
     placement: r.placement || undefined, keyword: r.keyword || undefined, gclid: r.gclid || undefined, fbclid: r.fbclid || undefined,
     origem_form: r.origem_form || 'site', cta: r.cta || undefined,
     pagina: r.pagina || undefined, crmOrigin: r.crm_origem || undefined, seller: r.vendedor || null, status: r.status,
-    statusTs: r.status_ts || undefined, quotationCode: r.crm_quotation_code || undefined, negotiationCode: r.crm_negotiation_code || undefined
+    statusTs: r.status_ts || undefined, quotationCode: r.crm_quotation_code || undefined, negotiationCode: r.crm_negotiation_code || undefined,
+    // só existe depois da 1ª conciliação do lead
+    crm: r.crm_sync_em ? {
+      syncEm: r.crm_sync_em, situacao: r.crm_situacao || undefined, etapa: r.crm_etapa || undefined, motivo: r.crm_motivo || undefined,
+      motivoObs: r.crm_motivo_obs || undefined, perdaVia: r.crm_perda_via || undefined, arquivadoEm: r.crm_arquivado_em || undefined,
+      tags: r.crm_tags || [], responsavel: r.crm_responsavel || undefined, plano: r.crm_plano || undefined, tabela: r.crm_tabela || undefined,
+      mensalidade: num(r.crm_mensalidade), adesao: num(r.crm_adesao), rastreador: num(r.crm_rastreador),
+      vistoriaEm: r.crm_vistoria_em || undefined, vendaEm: r.crm_venda_em || undefined
+    } : undefined
   };
+}
+
+// filtro "Situação no CRM" (aba Leads e CSV). 'pendente' = tem código do CRM mas ainda nunca foi conciliado.
+function crmFilter(situacao) {
+  if (!situacao) return [];
+  if (situacao === 'pendente') return ['crm_negotiation_code=not.is.null', 'crm_sync_em=is.null'];
+  return ['crm_situacao=eq.' + encodeURIComponent(situacao)];
 }
 
 // Registra o lead JÁ com o vendedor sorteado (se houver) e o status decidido por sendLead()
@@ -88,6 +109,7 @@ async function listLeads(opts) {
   const params = ['select=*', 'order=ts.desc', 'limit=' + limit];
   if (opts.veiculo) params.push('veiculo=eq.' + encodeURIComponent(opts.veiculo));
   if (opts.status) params.push('status=eq.' + encodeURIComponent(opts.status));
+  params.push(...crmFilter(opts.situacao));
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) params.push('ts=gte.' + encodeURIComponent(from));
   if (to) params.push('ts=lte.' + encodeURIComponent(to));
@@ -107,18 +129,26 @@ async function listLeads(opts) {
 // Separador ";" (e não vírgula): é o que o Excel em português do Brasil espera — com vírgula, ao dar duplo
 // clique ele joga tudo numa coluna só. Google Sheets e Power BI detectam o ";" sozinhos.
 const CSV_SEP = ';';
-const CSV_COLS = ['id', 'ts', 'tipo', 'veiculo', 'nome', 'telefone', 'placa', 'origem_form', 'cta', 'pagina', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'gclid', 'fbclid', 'crm_origem', 'vendedor', 'status', 'status_ts', 'crm_quotation_code', 'crm_negotiation_code'];
+const CSV_COLS = ['id', 'ts', 'tipo', 'veiculo', 'nome', 'telefone', 'placa', 'origem_form', 'cta', 'pagina', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'utm_id', 'act_id', 'placement', 'keyword', 'gclid', 'fbclid', 'crm_origem', 'vendedor', 'status', 'status_ts', 'crm_quotation_code', 'crm_negotiation_code', 'crm_sync_em'].concat(CRM_COLS);
+const CSV_MONEY = new Set(['crm_mensalidade', 'crm_adesao', 'crm_rastreador']); // vírgula decimal, como o Excel pt-BR espera
 function csvCell(v) {
   if (v == null) return '';
   let t = String(v);
   if (/^[=+\-@\t\r]/.test(t)) t = "'" + t; // evita "injeção de fórmula" ao abrir no Excel/Sheets
   return /[",\r\n;]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
 }
+function csvValue(r, c) {
+  const v = r[c];
+  if (Array.isArray(v)) return csvCell(v.join(' | '));
+  if (CSV_MONEY.has(c) && v != null) return csvCell(String(v).replace('.', ','));
+  return csvCell(v);
+}
 async function exportCsv(opts) {
   opts = opts || {};
   const base = ['select=' + CSV_COLS.join(','), 'order=ts.desc'];
   if (opts.veiculo) base.push('veiculo=eq.' + encodeURIComponent(opts.veiculo));
   if (opts.status) base.push('status=eq.' + encodeURIComponent(opts.status));
+  base.push(...crmFilter(opts.situacao));
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) base.push('ts=gte.' + encodeURIComponent(from));
   if (to) base.push('ts=lte.' + encodeURIComponent(to));
@@ -131,7 +161,7 @@ async function exportCsv(opts) {
   for (let off = 0; off < 100000; off += PAGE) {
     const res = await sb('/' + TABLE + '?' + base.concat('limit=' + PAGE, 'offset=' + off).join('&'));
     const rows = await res.json();
-    for (const r of rows) lines.push(CSV_COLS.map((c) => csvCell(r[c])).join(CSV_SEP));
+    for (const r of rows) lines.push(CSV_COLS.map((c) => csvValue(r, c)).join(CSV_SEP));
     if (rows.length < PAGE) break;
   }
   return '﻿' + lines.join('\r\n') + '\r\n'; // BOM: o Excel abre os acentos certo
@@ -144,17 +174,62 @@ function tally(rows, key) {
   return [...m.entries()].sort((a, b) => b[1] - a[1]).map(([label, count]) => ({ label, count }));
 }
 
-// aba "Relatórios": soma geral e divisões por veículo, plataforma, campanha, criativo, origem (CRM), vendedor e status
+const round2 = (n) => Math.round(n * 100) / 100;
+
+// funil de vendas do Power CRM para um grupo de leads (que têm código do CRM). "conciliados" = já conferidos no CRM e
+// encontrados lá; "vistorias" = chegaram à vistoria (ou já viraram venda); taxa de venda = vendidos ÷ leads do grupo.
+function funnelOf(rows) {
+  const f = { leads: rows.length, conciliados: 0, naoEncontrados: 0, abertos: 0, vistorias: 0, ganhos: 0, perdidos: 0, mensalidades: 0, adesoes: 0 };
+  for (const r of rows) {
+    if (!r.sync) continue;
+    if (r.situacao === 'nao_encontrado') { f.naoEncontrados++; continue; }
+    f.conciliados++;
+    if (r.situacao === 'ganho') { f.ganhos++; f.mensalidades += r.mensal; f.adesoes += r.adesao; }
+    else if (r.situacao === 'perdido') f.perdidos++;
+    else f.abertos++;
+    if (r.vistoria || r.situacao === 'ganho') f.vistorias++;
+  }
+  f.mensalidades = round2(f.mensalidades); f.adesoes = round2(f.adesoes);
+  f.taxaVenda = f.leads ? f.ganhos / f.leads : 0;
+  return f;
+}
+function funnelBy(rows, key) {
+  const m = new Map();
+  for (const r of rows) { const k = r[key] || '(não informado)'; if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
+  return [...m.entries()].map(([label, list]) => Object.assign({ label }, funnelOf(list))).sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos).slice(0, 40);
+}
+const FUNNEL_DIMS = { campanha: 'utm_campaign', criativo: 'utm_content', plataforma: 'utm_source', veiculo: 'veiculo', vendedor: 'seller' };
+
+// etapas do funil na ordem do funil (pelo número da coluna no CRM), não por quantidade
+function byStage(rows) {
+  const m = new Map();
+  for (const r of rows) {
+    const k = r.etapa || '(sem etapa)';
+    const e = m.get(k) || { label: k, count: 0, cod: r.etapaCod == null ? 99 : r.etapaCod };
+    e.count++; m.set(k, e);
+  }
+  return [...m.values()].sort((a, b) => a.cod - b.cod || b.count - a.count).map(({ label, count }) => ({ label, count }));
+}
+
+// aba "Relatórios": soma geral e divisões por veículo, plataforma, campanha, criativo, origem (CRM), vendedor e status,
+// mais o funil de vendas do Power CRM (etapas, descartes com motivo, vendas) cruzado com campanha/criativo/plataforma…
 async function aggregate(opts) {
   opts = opts || {};
-  const params = ['select=ts,veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status', 'limit=20000'];
+  const params = ['select=ts,veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status,crm_negotiation_code,crm_sync_em,crm_situacao,crm_etapa,crm_etapa_cod,crm_motivo,crm_tags,crm_mensalidade,crm_adesao,crm_vistoria_em', 'limit=20000'];
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) params.push('ts=gte.' + encodeURIComponent(from));
   if (to) params.push('ts=lte.' + encodeURIComponent(to));
   const res = await sb('/' + TABLE + '?' + params.join('&'));
   const raw = await res.json();
-  const rows = raw.map((r) => ({ veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword, origem_form: r.origem_form === 'whatsapp' ? 'Pop-up do WhatsApp' : 'Formulário do site', cta: r.cta, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status }));
+  const rows = raw.map((r) => ({
+    veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword,
+    origem_form: r.origem_form === 'whatsapp' ? 'Pop-up do WhatsApp' : 'Formulário do site', cta: r.cta, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status,
+    crmCode: !!r.crm_negotiation_code, sync: r.crm_sync_em, situacao: r.crm_situacao, etapa: r.crm_etapa, etapaCod: r.crm_etapa_cod, motivo: r.crm_motivo,
+    tags: r.crm_tags || [], mensal: Number(r.crm_mensalidade) || 0, adesao: Number(r.crm_adesao) || 0, vistoria: r.crm_vistoria_em
+  }));
   const sent = rows.filter((r) => r.status === 'sent' || r.status === 'dry-run');
+  const crmRows = rows.filter((r) => r.crmCode);
+  const found = crmRows.filter((r) => r.sync && r.situacao !== 'nao_encontrado'); // conferidos e achados no CRM
   // médias: período = filtro "De/Até" (ou do 1º lead até agora/até o fim do filtro); mínimo de 1 dia
   const tss = raw.map((r) => Date.parse(r.ts)).filter(Number.isFinite);
   const start = opts.from || (tss.length ? Math.min(...tss) : Date.now());
@@ -180,18 +255,65 @@ async function aggregate(opts) {
     porBotao: tally(rows.filter((r) => r.cta), 'cta'),
     porOrigemCrm: tally(sent, 'crmOrigin'),
     porVendedor: tally(rows.filter((r) => r.seller), 'seller'),
-    porStatus: tally(rows, 'status')
+    porStatus: tally(rows, 'status'),
+    // Power CRM: leads sem código (duplicados/falha de envio) nunca chegaram lá, então ficam fora do funil
+    funil: Object.assign(funnelOf(crmRows), { semCodigo: rows.length - crmRows.length }),
+    funilPor: Object.fromEntries(Object.entries(FUNNEL_DIMS).map(([k, col]) => [k, funnelBy(crmRows, col)])),
+    porEtapaCrm: byStage(found),
+    porMotivoCrm: tally(found.filter((r) => r.situacao === 'perdido'), 'motivo'),
+    porTagCrm: tally(found.flatMap((r) => r.tags.map((tag) => ({ tag }))), 'tag')
   };
 }
 
+// Conciliação (scripts/lib/crmsync.js) ---------------------------------------------------------------------------
+
+// leads que entram na rodada: têm código do CRM e (são recentes OU nunca foram conferidos OU ainda estão em andamento)
+async function leadsForCrmSync(cutoffIso) {
+  const cols = ['id', 'ts', 'crm_negotiation_code', 'crm_quotation_code', 'crm_sync_em'].concat(CRM_COLS);
+  const or = 'or=(ts.gte.' + encodeURIComponent(cutoffIso) + ',crm_sync_em.is.null,crm_situacao.eq.aberto)';
+  const res = await sb('/' + TABLE + '?select=' + cols.join(',') + '&crm_negotiation_code=not.is.null&order=ts.asc&limit=20000&' + or);
+  return res.json();
+}
+
+// grava o resultado: plan.changes = [{ id, fields }] (retrato novo), plan.touch = [ids] (sem mudança, só atualiza a hora)
+async function applyCrm(plan) {
+  const syncEm = plan.syncEm || new Date().toISOString();
+  const patch = (c) => sb('/' + TABLE + '?id=eq.' + encodeURIComponent(c.id), { method: 'PATCH', body: JSON.stringify(Object.assign({}, c.fields, { crm_sync_em: syncEm })) });
+  for (let i = 0; i < plan.changes.length; i += 6) await Promise.all(plan.changes.slice(i, i + 6).map(patch));
+  for (let i = 0; i < plan.touch.length; i += 80) {
+    const ids = plan.touch.slice(i, i + 80).map(encodeURIComponent).join(',');
+    await sb('/' + TABLE + '?id=in.(' + ids + ')', { method: 'PATCH', body: JSON.stringify({ crm_sync_em: syncEm }) });
+  }
+}
+
+// para a tela: quantos leads têm código do CRM, quantos já foram conferidos e quando foi a última conferência
+async function crmStatus() {
+  const count = async (filter) => {
+    const res = await sb('/' + TABLE + '?select=id&limit=1&' + filter, { headers: { Prefer: 'count=exact' } });
+    const range = res.headers.get('content-range'); // "0-0/120" (ou "*/0")
+    return range && range.includes('/') ? Number(range.split('/')[1]) || 0 : 0;
+  };
+  const [elegiveis, conciliados, last] = await Promise.all([
+    count('crm_negotiation_code=not.is.null'),
+    count('crm_sync_em=not.is.null'),
+    sb('/' + TABLE + '?select=crm_sync_em&crm_sync_em=not.is.null&order=crm_sync_em.desc&limit=1').then((r) => r.json())
+  ]);
+  return { elegiveis, conciliados, ultima: last[0] ? last[0].crm_sync_em : null };
+}
+
+// o erro é "o banco ainda não tem as colunas crm_*" (migration 0005 não aplicada)?
+const isSchemaMissing = (e) => /42703|PGRST204|column .*crm_.* does not exist|Could not find the .*crm_/i.test((e && e.message) || '');
+
 // quantos leads cada vendedor ativo já tem, para um veículo — usado pelo rodízio (powercrm.js) para
 // sortear o vendedor com MENOS leads até agora (funciona mesmo sem contador nenhum salvo à parte).
-async function countsBySeller(veiculo) {
-  const res = await sb('/' + TABLE + '?select=vendedor&veiculo=eq.' + encodeURIComponent(veiculo) + '&vendedor=not.is.null&limit=20000');
+// `desde` (ISO, opcional): só conta leads a partir dessa data — usado quando um vendedor novo entra no rodízio.
+async function countsBySeller(veiculo, desde) {
+  const since = desde && !isNaN(Date.parse(desde)) ? '&ts=gte.' + encodeURIComponent(new Date(desde).toISOString()) : '';
+  const res = await sb('/' + TABLE + '?select=vendedor&veiculo=eq.' + encodeURIComponent(veiculo) + '&vendedor=not.is.null' + since + '&limit=20000');
   const rows = await res.json();
   const counts = {};
   for (const r of rows) counts[r.vendedor] = (counts[r.vendedor] || 0) + 1;
   return counts;
 }
 
-module.exports = { recordCreated, recordStatus, listLeads, exportCsv, aggregate, countsBySeller };
+module.exports = { recordCreated, recordStatus, listLeads, exportCsv, aggregate, countsBySeller, CRM_COLS, leadsForCrmSync, applyCrm, crmStatus, isSchemaMissing };
