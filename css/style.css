@@ -639,7 +639,7 @@ body::after {
 @media (min-width: 980px) and (max-height: 720px) { .extras__note { display: none; } }
 
 /* ==========================================================================
-   ESQUENTA BLACK · selo (medalhão) + subtítulo + selo compacto do CTA final
+   BLACK FRIDAY · selo (medalhão) + subtítulo + selo compacto do CTA final
    Preto fosco, vermelho vibrante, cinza e detalhes brancos. Sem brilho nem cromado.
    ========================================================================== */
 :root {
@@ -812,7 +812,7 @@ body::after {
 @media (max-width: 380px) { .price { right: 6px; --py: 7px; --pl: 10px; --pr: 10px; } .price b { font-size: 1.6rem; } .price strong span { margin-right: 4px; } }
 @media (max-width: 380px) { .aform__title { font-size: 1.3rem; } }
 
-/* celular: respiro entre a oferta (Esquenta Black) e o cartão de preço, que sobe 30px sobre o formulário */
+/* celular: respiro entre a oferta (Black Friday) e o cartão de preço, que sobe 30px sobre o formulário */
 @media (max-width: 560px) { .hero__formwrap { margin-top: 24px; } }
 /* celulares muito estreitos: título e preço um pouco menores para o cartão não encostar no "Cote seu carro" */
 @media (max-width: 350px) { .aform__title { font-size: 1.02rem; } .price b { font-size: 1.45rem; } }

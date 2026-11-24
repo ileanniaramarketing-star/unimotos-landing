@@ -704,7 +704,7 @@
 
     // ----- marquee: acelera com a velocidade do scroll -----
     const track = $('#marqueeTrack');
-    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 46, repeat: -1 }); // a duração acompanha a largura do grupo (linha da oferta + benefícios): se o texto do letreiro crescer/encolher, escale p/ manter a mesma velocidade (42 s com o texto "até 50%"; 46 s com "70% OFF… De/Por… 16/11")
+    const loop = gsap.to(track, { xPercent: -25, ease: 'none', duration: 33.4, repeat: -1 }); // a duração acompanha a largura do grupo (linha da oferta + benefícios): se o texto do letreiro crescer/encolher, escale p/ manter a mesma velocidade (~129 px/s em tela de 1440: 46 s com "75% OFF… De/Por… 16/11"; 33,4 s com "Black Friday · Adesão zero · boleto em janeiro")
     let ts = 1, dir = 1;
     ScrollTrigger.create({
       onUpdate: (self) => {
