@@ -240,6 +240,20 @@ th.sticky-col { background: #0d0d0e; }
 .funil-cards .report-row span { min-width: 0; overflow-wrap: anywhere; }
 .funil-cards .report-row b { flex: none; font-variant-numeric: tabular-nums; }
 
+/* ---- INVESTIMENTO EM ANÚNCIOS (gasto do Meta/Google cruzado com os leads) ---- */
+.kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.kpis--3 .kpi:nth-child(n) { border-right: 1px solid var(--line); border-bottom: 0; }
+.kpis--3 .kpi:last-child { border-right: 0; }
+.funil-table .label-tag { display: inline-block; margin-left: 8px; padding: 1px 7px; border: 1px dashed var(--line-2); border-radius: 99px; font-size: .66rem; font-weight: 700; letter-spacing: .02em; color: var(--muted); white-space: nowrap; vertical-align: middle; cursor: help; }
+.conf { margin-top: 8px; }
+.conf__t { margin-bottom: 10px; font-size: .7rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+#invest[hidden] { display: none; }
+
+@media (max-width: 900px) { /* 3 blocos continuam em 3 colunas até o celular (o padrão de 2 colunas deixaria um sobrando) */
+  .kpis.kpis--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpis--3 .kpi:nth-child(n) { border-right: 1px solid var(--line); border-bottom: 0; }
+  .kpis--3 .kpi:last-child { border-right: 0; }
+}
 @media (max-width: 900px) {
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpi:nth-child(4n) { border-right: 1px solid var(--line); }
@@ -251,6 +265,15 @@ th.sticky-col { background: #0d0d0e; }
   .crm-bar { flex-direction: column; align-items: stretch; }
   .crm-btn { width: 100%; height: 44px; }
   .kpi { padding: 14px 16px; }
+  .kpis.kpis--3 { grid-template-columns: minmax(0, 1fr); }
+  .kpis--3 .kpi:nth-child(n) { border-right: 0; border-bottom: 1px solid var(--line); }
+  .kpis--3 .kpi:last-child { border-bottom: 0; }
+  /* celular: cada bloco vira uma linha (rótulo à esquerda, valor à direita, detalhe embaixo) em vez de 3 blocos altos empilhados */
+  .kpis--3 .kpi { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; column-gap: 12px; padding: 12px 16px; }
+  .kpis--3 .kpi dt { grid-column: 1; grid-row: 1; margin: 0; }
+  .kpis--3 .kpi__v { grid-column: 2; grid-row: 1; text-align: right; }
+  .kpis--3 .kpi__sub { grid-column: 1 / -1; grid-row: 2; margin-top: 4px; }
+  .funil-table .label-tag { display: table; margin: 4px 0 0; }
   .funil-table .label { width: 160px; max-width: 160px; white-space: normal; line-height: 1.3; vertical-align: middle; } /* nome da campanha quebra em 2 linhas: no celular não há "passar o mouse" para ler inteiro */
   .painel-table .trunc { max-width: 180px; }
 }

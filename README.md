@@ -11,14 +11,15 @@ Duas páginas de campanha, no mesmo visual da arte da campanha (vermelho e preto
 HTML/CSS/JS puros, sem dependências para instalar (GSAP e Lenis estão em `assets/vendor/`). Um servidor Node mínimo
 (`scripts/serve.js`) entrega as páginas e recebe o formulário em `/api/lead`, que encaminha o lead ao **Power CRM**.
 
-### Trocar a oferta da campanha (Esquenta Black)
+### Trocar a oferta da campanha (hoje: Black Friday)
 
 O texto da oferta é HTML fixo (não depende de JavaScript), então uma troca mexe nestes lugares — em `motos/` e `carros/`:
 
-- **Herói** (`#offer`): `.black__lead` (frase), `.black__deal` (preço *De* riscado → *Por*, com texto escondido para leitor de tela) e `.black__until` (prazo).
-- **Letreiro** (`#marqueeTrack`): 4 linhas iguais da oferta. Se o texto ficar mais longo/curto, ajuste a `duration` do letreiro em `js/main.js` (42 s com o texto antigo, 46 s com o atual) para manter a velocidade.
+- **Selo** (medalhão SVG do herói): anel que gira (`.bs-ring`), palavra pequena em vermelho (`.bs-esq`) e palavra grande (`.bs-blk`, com `textLength` para caber no círculo) e o texto para leitor de tela (`.bseal__sr`).
+- **Herói** (`#offer`): `.black__lead` (frase), `.black__deal` (preço *De* riscado → *Por*, com texto escondido para leitor de tela) e `.black__until` (prazo — hoje "Válido até dia 30/11", ver abaixo).
+- **Letreiro** (`#marqueeTrack`): 4 linhas iguais da oferta. Se o texto ficar mais longo/curto, ajuste a `duration` do letreiro em `js/main.js` (medido: ~129 px/s numa tela de 1440 px — 46 s com "Esquenta Black · 75% OFF · De/Por · boleto em dezembro · 16/11"; 33,4 s com "Black Friday · Adesão zero · boleto em janeiro"; 39,7 s com "Black Friday · 75% OFF na adesão · De R$ 200 por R$ 50 · boleto em janeiro"; 43,7 s com o prazo "Válido até 30/11" no fim, que é o atual) para manter a velocidade.
 - **Faixa do CTA final**: `.blackbar__deal` e `.blackbar__note` (onde vai a data de fechamento).
-- **Depois do prazo** (a oferta atual fecha em 16/11): trocar/retirar o texto de prazo; não há nada que apague a data sozinho.
+- **Prazo**: hoje a oferta vale **até 30/11/2026** (herói: pílula `<p class="black__until">Válido até dia 30/11</p>` depois do `.black__deal`; letreiro: item "Válido até 30/11"; faixa final: `<b>Válido até dia 30/11.</b>` no início do `.blackbar__note`). Nada apaga a data sozinho: **depois de 30/11 retire os três trechos** (e, no `js/main.js`, volte a `duration` para ~39,7 s) ou troque pela nova data. Histórico: a oferta de 16/11 ficou no ar vencida por 8 dias até ser trocada em 24/11/2026.
 
 ## Como o lead chega ao CRM (e por que o token nunca vai ao navegador)
 
@@ -41,7 +42,7 @@ Navegador ──POST /api/lead──▶ servidor do site ──grava no Supabase
   função sozinho, dentro de menos de 1 segundo, sem o Node precisar esperar ou continuar rodando.
 - O WhatsApp abre em paralelo (resposta imediata do Node, sem esperar o Supabase): se o CRM estiver fora do ar, o lead não se perde para o cliente.
 - O servidor valida tudo de novo (nome, telefone BR, placa), tem isca anti-robô, limite por IP, anti-duplicidade e só aceita requisições da própria origem.
-- **Rodízio** entre Vitor, Kethlen e Fernanda (quem tem menos leads daquele veículo; empate no sorteio), `config/powercrm.json`. Para incluir alguém: ativar em `sellers[]` (nome, PowerLink `code`, `whatsapp`) **e** copiar na Edge Function (veja abaixo) — com `desde` na entrada para o rodízio recomeçar do zero para todos. Quem decide o vendedor da vez é o **próprio site** (antes de gravar no Supabase) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
+- **Rodízio** entre **Kethlen e Fernanda** desde 24/11/2026 (Vitor está com `"active": false`: continua na lista e na Edge Function só para não quebrar leads dele já gravados; para ele voltar, basta `"active": true` + `desde`). Quem tem menos leads daquele veículo recebe; empate no sorteio. Arquivo: `config/powercrm.json`. Para incluir alguém: ativar em `sellers[]` (nome, PowerLink `code`, `whatsapp`) **e** copiar na Edge Function (veja abaixo) — com `desde` na entrada para o rodízio recomeçar do zero para todos. Quem decide o vendedor da vez é o **próprio site** (antes de gravar no Supabase) — dá pra conferir cada decisão no [painel interno](#painel-interno-painel-leads-e-relatórios).
 - Enquanto `config/powercrm.json` não estiver preenchido, o servidor só registra no log que o lead **não** foi ao CRM (`crm: not_configured` em `/api/health`).
   Com tudo preenchido, o padrão local é **dry-run** (mostra o que enviaria, sem enviar — nunca grava `status: "pendente"`, então nunca aciona o webhook); só `POWERCRM_LIVE=1` faz o Node gravar pronto pra envio.
 - Detalhes de deploy, segredos e redeploy da função: `supabase/functions/send-lead/README.md`. Migração do gatilho: `supabase/migrations/0001_send_lead_webhook.sql`.
@@ -86,6 +87,12 @@ pra isso — quem decide o vendedor da vez também é aqui, antes de mandar a co
   - **Como roda**: só **lê** o Power CRM (`POST /api/report/db/paginated` em blocos de 15 dias + `GET /api/negotiation/{código}` para o nome da etapa) e grava só colunas `crm_*` dos leads; dado pessoal do relatório do CRM (clientes, CPF dos vendedores) nunca é guardado. Pega os leads dos últimos 90 dias, os nunca conferidos e os ainda em andamento. Não roda sozinha: é o botão. Pode demorar até ~1 minuto (limite de 100 s; se estourar, avisa "parcial" e é só clicar de novo). Duas pessoas não rodam ao mesmo tempo (a segunda recebe aviso). Regras (janela, etapas que contam como venda, tags) em `config/powercrm.json` → `conciliacao`.
   - Precisa de `POWERCRM_TOKEN` **e** `SUPABASE_SERVICE_KEY` nas variáveis de ambiente do servidor. Sem token o botão fica desligado com o aviso; sem a migration `0005` aplicada a tela avisa. Código: `scripts/lib/crmsync.js` (regras e CRM), `scripts/lib/store.js` (gravação e funil), rota `GET/POST /api/painel/crm-sync` em `scripts/serve.js`.
   - Filtro **"Situação no CRM"** na aba Leads e no CSV (que também traz todas as colunas do CRM).
+- **Investimento em anúncios** (aba Relatórios → "Investimento em anúncios", acima do funil): gasto real do **Meta Ads** e do **Google Ads** cruzado com os leads e as vendas — **investimento, custo por lead e custo por venda**, por campanha / criativo / plataforma, mais uma **conferência** do que a plataforma contou (gasto, cliques, leads) × o que o site registrou. Vale para o período do filtro (corte por dia, horário de Brasília).
+  - **De onde vem**: o servidor do site **não** tem acesso às contas de anúncio (um token do Meta/Google enxerga muito mais do que esta LP). Quem busca é o computador da gestão: `npm run ads:sync` (ou `npm run ads:simular`, que só mostra sem gravar). Ele usa os acessos do cofre da **Niara Hub** (`C:\NIARA-HUB-IA-ADS`, ou a pasta em `NIARA_HUB`) com **PowerShell 7 (`pwsh`)**, só **lê** as plataformas, confere as linhas (uma linha estranha aborta tudo, nada é gravado pela metade) e grava no Supabase (`ad_spend_diario`, migration `0006`; regravar o mesmo dia atualiza, nunca duplica). Contas e opções em `config/anuncios.json`. O painel mostra "atualizado em …" e avisa quando faltam dias — **rode o comando de novo para atualizar** (dá para agendar no Windows).
+  - **Como liga lead e gasto**: pelo `utm_id` (ID da campanha — sobrevive a renomeação), senão pelo nome exato em `utm_campaign`, senão pelos apelidos de `config/anuncios.json` → `apelidosCampanha` (nome antigo → ID atual; hoje há 2, por renomeação no Meta e sufixo ` [DIARIO-30]` no Google). Nunca liga por "nome parecido". Criativo: `utm_content` = nome do anúncio (Meta) ou ID do anúncio (Google). **Dica:** o Meta já manda `utm_id` (ID da campanha); o Google ainda não — acrescentar `utm_id={campaignid}` no modelo de acompanhamento da campanha do Google dispensa o apelido dele.
+  - **O que entra no custo por lead**: investimento das campanhas "da LP" (as que têm ao menos 1 lead no painel, de qualquer época) ÷ leads de anúncio (utm Meta/Google ou campanha ligada) que chegaram ao CRM. Campanha com gasto e **sem** lead no painel (ex.: conversa direta no WhatsApp) aparece com a etiqueta "sem lead no painel" e fica **de fora** do custo por lead (o total dela aparece à parte). **Custo por venda** só existe depois da conciliação com o Power CRM.
+  - **Limites que o painel avisa**: leads sem criativo identificado (link sem `utm_content` ou com `{{ad.name}}` em branco) deixam o custo por **criativo** acima do real; Meta "clique" = clique no link (o que chega na página); Google "leads" = conversões cujo nome casa com `google.acaoLead` (as demais, como ligações, viram "outros contatos"). O gasto soma centavos por dia: pode diferir em centavos do total do gerenciador.
+  - Sem a tabela/sem dados, o painel só mostra o aviso e **tudo o mais continua funcionando**. Código: `scripts/ads-fetch.ps1` (busca), `scripts/sync-ads.js` (confere e grava), `scripts/lib/adspend.js` (regras de ligação, sem rede), `scripts/lib/store.js` (leitura paginada e relatório).
 - **Gerenciar vendedores** (adicionar/remover do rodízio) continua sendo em `config/powercrm.json`, não tem tela pra isso ainda.
 - Local: `npm run dev` → `http://127.0.0.1:4321/painel/`. Em produção: `https://SEU-DOMINIO/painel/` (as três variáveis do
   cofre também precisam existir no painel de variáveis de ambiente da hospedagem).
@@ -161,8 +168,10 @@ assets/             favicon, imagens de compartilhamento (og*.jpg), brand/ (logo
 config/powercrm.json  configuração NÃO secreta do CRM
 config/meta.json     configuração NÃO secreta do Meta Pixel/Conversions API
 config/supabase.json configuração NÃO secreta do Supabase (URL do projeto; a chave fica no cofre)
+config/anuncios.json contas do Meta/Google e apelidos de campanha (gasto dos anúncios; sem segredo)
 scripts/            serve.js (servidor + /api/lead, /api/pageview e /api/painel/*), build.js, vault.ps1
-scripts/lib/        lead.js, powercrm.js, metacapi.js, pageview.js, auth.js (login do painel), store.js (leads no Supabase)
+scripts/lib/        lead.js, powercrm.js, metacapi.js, pageview.js, auth.js (login do painel), store.js (leads no Supabase), adspend.js (gasto × leads)
+scripts/ads-fetch.ps1, scripts/sync-ads.js   busca o gasto no Meta/Google (cofre da Niara Hub) e grava no Supabase — `npm run ads:sync`
 supabase/functions/send-lead/  Edge Function que manda de verdade ao Power CRM (ver seção acima)
 supabase/migrations/            SQL do gatilho (Database Webhook) que aciona a função
 ```

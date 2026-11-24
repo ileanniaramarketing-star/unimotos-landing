@@ -511,6 +511,7 @@
       renderList('#repVendedor', data.porVendedor);
       renderList('#repStatus', data.porStatus, data.total);
       lastReport = data;
+      renderInvest(data);
       renderFunil(data);
     }
     reportForm.addEventListener('submit', (e) => { e.preventDefault(); loadReports().catch(() => {}); });
@@ -527,7 +528,7 @@
 
     function renderFunilRows() {
       if (!lastReport) return;
-      const rows = (lastReport.funilPor && lastReport.funilPor[funilDim]) || [];
+      const rows = ((lastReport.funilPor && lastReport.funilPor[funilDim]) || []).filter((r) => !r.semLeads); // campanha/anúncio só com gasto aparece em "Investimento"
       $('#funilColLabel').textContent = DIM_LABEL[funilDim];
       const tb = $('#funilBodyRows'); tb.textContent = '';
       for (const r of rows) {
@@ -603,6 +604,87 @@
       funilDim = b.getAttribute('data-dim');
       $$('#funilDim button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
       renderFunilRows();
+    }));
+
+    /* ---------------------------------------------------------------- *
+     * INVESTIMENTO EM ANÚNCIOS — gasto do Meta/Google (sincronizado por
+     * `npm run ads:sync`) cruzado com os leads e, depois da conciliação, as vendas.
+     * ---------------------------------------------------------------- */
+    let investDim = 'campanha';
+    const brDia = (iso) => (iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '');
+    const brQuando = (iso) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).replace(',', '') : '');
+    const brlOrDash = (v) => (v == null || v === 0 ? '—' : fmtBrl(v));
+
+    function renderInvestRows() {
+      if (!lastReport) return;
+      const conc = (lastReport.funil && lastReport.funil.conciliados) || 0; // sem nenhuma conciliação, "vendidos 0" enganaria: mostra traço
+      const rows = ((lastReport.funilPor && lastReport.funilPor[investDim]) || []).filter((r) => r.investimento > 0 || r.leads > 0);
+      $('#investColLabel').textContent = DIM_LABEL[investDim];
+      const tb = $('#investBodyRows'); tb.textContent = '';
+      for (const r of rows) {
+        const tr = document.createElement('tr');
+        const lab = el('td', 'sticky-col');
+        const s = el('span', 'label', r.label); s.title = r.label; lab.appendChild(s);
+        if (r.foraDoPainel) { const t = el('span', 'label-tag', 'sem lead no painel'); t.title = 'Tem gasto, mas nenhum lead registrado aqui (ex.: conversa direta no WhatsApp). Não entra no custo por lead.'; lab.appendChild(t); }
+        else if (!r.semLeads && !(r.investimento > 0)) { const t = el('span', 'label-tag', 'sem gasto ligado'); t.title = 'Leads sem campanha/anúncio identificado (link sem UTM, parâmetro em branco ou nome que não bate com o gerenciador).'; lab.appendChild(t); }
+        const num = (text, cls) => el('td', 'num' + (cls ? ' ' + cls : ''), text);
+        tr.append(
+          lab, num(brlOrDash(r.investimento), r.investimento ? '' : 'is-zero'), num(r.cliques ? fmtInt(r.cliques) : '—', r.cliques ? '' : 'is-zero'),
+          num(fmtInt(r.leads), r.leads ? '' : 'is-zero'), num(r.cpl != null ? fmtBrl(r.cpl) : '—', r.cpl != null ? '' : 'is-zero'),
+          num(conc ? fmtInt(r.ganhos) : '—', conc && r.ganhos ? 'is-win' : 'is-zero'), num(r.custoVenda != null ? fmtBrl(r.custoVenda) : '—', r.custoVenda != null ? 'is-win' : 'is-zero')
+        );
+        tb.appendChild(tr);
+      }
+    }
+
+    function renderInvest(data) {
+      const a = data.anuncios || {}, f = data.funil || {};
+      const empty = $('#investEmpty'), bodyEl = $('#investBody');
+      if (!a.disponivel) {
+        bodyEl.hidden = true; empty.hidden = false; empty.textContent = '';
+        const MSG = {
+          sem_tabela: ['O gasto dos anúncios ainda não está ligado a este painel.', 'Falta criar a tabela no banco (migration 0006) e rodar a primeira sincronização.'],
+          sem_dados: ['O gasto dos anúncios ainda não foi sincronizado.', 'No computador da gestão, rode "npm run ads:sync" para buscar o gasto do Meta e do Google.'],
+          erro: ['Não consegui ler o gasto dos anúncios agora.', 'Os leads e o funil continuam funcionando. Tente de novo em instantes.']
+        };
+        const m = MSG[a.motivo] || MSG.sem_dados;
+        empty.append(el('b', '', m[0]), document.createTextNode(m[1]));
+        return;
+      }
+      empty.hidden = true; bodyEl.hidden = false;
+      const conc = f.conciliados || 0;
+
+      setMoney('#kInvest', f.investimento || 0);
+      $('#kInvestSub').textContent = f.investimentoOutras > 0 ? '+ ' + fmtBrl(f.investimentoOutras) + ' em outras campanhas da conta' : 'campanhas que geram lead no painel';
+      if (f.cpl != null) setMoney('#kCpl', f.cpl); else $('#kCpl').textContent = '—';
+      $('#kCplSub').textContent = f.leadsPagos ? 'investimento ÷ ' + plural(f.leadsPagos, 'lead de anúncio', 'leads de anúncio') + ' no CRM' : 'nenhum lead de anúncio no período';
+      if (f.custoVenda != null) setMoney('#kCac', f.custoVenda); else $('#kCac').textContent = '—';
+      $('#kCacSub').textContent = !conc ? 'aguardando a conciliação do CRM' : f.ganhosPagos ? 'investimento ÷ ' + plural(f.ganhosPagos, 'venda', 'vendas') : 'nenhuma venda no período';
+
+      renderInvestRows();
+
+      const notes = [];
+      notes.push('Gasto de ' + brDia(a.desde) + ' a ' + brDia(a.ate) + ', atualizado em ' + brQuando(a.atualizadoEm) + (a.atrasoDias >= 1 ? ' — faltam os dias depois de ' + brDia(a.ate) + ' (rode "npm run ads:sync" para atualizar)' : ''));
+      notes.push('Custo por lead = investimento ÷ leads de anúncio que chegaram ao CRM');
+      if (f.leadsSemCriativo > 0 && investDim === 'criativo') notes.push(plural(f.leadsSemCriativo, 'lead veio', 'leads vieram') + ' sem o criativo identificado (link sem UTM ou com o parâmetro em branco): o custo por criativo fica acima do real');
+      $('#investNota').textContent = notes.join(' · ') + '.';
+
+      // conferência: o que a plataforma contou × o que o site registrou
+      const tb = $('#confBodyRows'); tb.textContent = '';
+      const NOME = { meta: 'Meta Ads', google: 'Google Ads' };
+      for (const c of a.conferencia || []) {
+        const tr = document.createElement('tr');
+        const lab = el('td', '', NOME[c.plataforma] || c.plataforma); lab.style.fontWeight = '700'; lab.style.color = '#fff';
+        const num = (text) => el('td', 'num', text);
+        tr.append(lab, num(fmtBrl(c.investimento)), num(fmtInt(c.cliques)), num(fmtInt(c.leadsPlataforma)), num(fmtInt(c.contatosPlataforma)), num(fmtInt(c.leadsPainel)));
+        tb.appendChild(tr);
+      }
+      $('#confNota').textContent = '"Leads (plataforma)" = o que o Meta/Google contaram como lead; "Leads no site" = o que o formulário do site registrou. "Outros contatos": conversas no WhatsApp (Meta) e ligações/demais conversões (Google). Diferenças pequenas são normais (bloqueio de rastreio, envios duplicados).';
+    }
+    $$('#investDim button').forEach((b) => b.addEventListener('click', () => {
+      investDim = b.getAttribute('data-dim');
+      $$('#investDim button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      if (lastReport) renderInvest(lastReport); // refaz a tabela e a nota (o aviso de criativo só aparece em "Criativo")
     }));
 
     /* ---------------------------------------------------------------- *

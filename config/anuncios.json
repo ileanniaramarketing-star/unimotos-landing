@@ -1,0 +1,19 @@
+{
+  "_nota": "Configuração NÃO secreta da sincronização de gasto dos anúncios (scripts/ads-fetch.ps1 + scripts/sync-ads.js). Os acessos (Meta/Google) ficam no cofre da Niara Hub (C:\\NIARA-HUB-IA-ADS), nunca aqui; o Supabase usa SUPABASE_SERVICE_KEY do cofre deste projeto. Roda no computador da gestora (npm run ads:sync) — o servidor do site NÃO tem acesso às plataformas de anúncio.",
+  "desde": "2026-09-01",
+  "meta": {
+    "contaId": "act_1508785353039001",
+    "nome": "UniMotosCar"
+  },
+  "google": {
+    "customerId": "8945068447",
+    "loginCustomerId": "3748605872",
+    "nome": "UNIMOTOS.CAR",
+    "acaoLead": "lead"
+  },
+  "apelidosCampanha": {
+    "_nota": "O painel liga cada lead à campanha pelo utm_id (ID da campanha, sobrevive a renomeações) e, se não tiver, pelo nome exato em utm_campaign. Quando a campanha foi RENOMEADA (ou o anúncio não manda o ID), o utm_campaign do lead fica com o nome de antes: registre aqui o nome antigo -> ID da campanha atual. Só por ID confirmado, nunca por semelhança de nome.",
+    "[NIARA-MARKETING][META202609-001][META][TRAF][PROTEJA-O-QUE-LEVOU-TEMPO-PARA-CONSTRUIR]": "120249370034780545",
+    "[NIARA-MARKETING][META202609-001][GADS][LEAD][PROTEJA-O-QUE-LEVOU-TEMPO-PARA-CONSTRUIR]": "24407724698"
+  }
+}

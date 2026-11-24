@@ -13,10 +13,13 @@
 */
 const fs = require('fs');
 const path = require('path');
+const adspend = require('./adspend');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const CFG_PATH = process.env.SUPABASE_CONFIG || path.join(ROOT, 'config', 'supabase.json');
 const TABLE = process.env.SUPABASE_LEADS_TABLE || 'leads'; // testes automatizados usam "leads_test"
+const ADS_TABLE = process.env.SUPABASE_ADSPEND_TABLE || 'ad_spend_diario'; // gasto diário dos anúncios (migration 0006)
+const ADS_CFG_PATH = process.env.ANUNCIOS_CONFIG || path.join(ROOT, 'config', 'anuncios.json');
 const key = () => process.env.SUPABASE_SERVICE_KEY || '';
 
 const redact = (s) => { const k = key(); return k ? String(s).split(k).join('[REDACTED]') : String(s); };
@@ -39,6 +42,19 @@ async function sb(p, opts) {
 }
 
 const num = (v) => (v == null ? undefined : Number(v));
+
+// O Supabase corta cada resposta num teto (1000 linhas, não importa o "limit" pedido): lê em páginas até acabar.
+// A consulta precisa ter "order" estável, senão as páginas podem repetir/pular linhas.
+async function fetchAll(pathWithQuery) {
+  const PAGE = 1000, out = [];
+  for (let off = 0; off < 500000; off += PAGE) {
+    const res = await sb(pathWithQuery + (pathWithQuery.includes('?') ? '&' : '?') + 'limit=' + PAGE + '&offset=' + off);
+    const rows = await res.json();
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
 
 // linha do banco (colunas em português) -> objeto que o resto do código/painel já espera
 function fromRow(r) {
@@ -193,12 +209,117 @@ function funnelOf(rows) {
   f.taxaVenda = f.leads ? f.ganhos / f.leads : 0;
   return f;
 }
+const sortFunnel = (list) => list.sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos || (b.investimento || 0) - (a.investimento || 0)).slice(0, 40);
 function funnelBy(rows, key) {
   const m = new Map();
   for (const r of rows) { const k = r[key] || '(não informado)'; if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
-  return [...m.entries()].map(([label, list]) => Object.assign({ label }, funnelOf(list))).sort((a, b) => b.leads - a.leads || b.ganhos - a.ganhos).slice(0, 40);
+  return sortFunnel([...m.entries()].map(([label, list]) => Object.assign({ label }, funnelOf(list))));
 }
-const FUNNEL_DIMS = { campanha: 'utm_campaign', criativo: 'utm_content', plataforma: 'utm_source', veiculo: 'veiculo', vendedor: 'seller' };
+const FUNNEL_DIMS = { veiculo: 'veiculo', vendedor: 'seller' }; // sem gasto próprio (um anúncio não é "de" um veículo/vendedor)
+
+// ---- gasto dos anúncios (tabela ad_spend_diario, gravada por scripts/sync-ads.js) ------------------------------------
+const ZERO_SPEND = { investimento: 0, impressoes: 0, cliques: 0 };
+// junta o gasto a uma linha do funil: custo por lead = investimento ÷ leads; custo por venda = investimento ÷ vendidos
+const withSpend = (f, s) => Object.assign(f, { investimento: adspend.round2(s.investimento), impressoes: s.impressoes, cliques: s.cliques, cpl: adspend.cost(s.investimento, f.leads), custoVenda: adspend.cost(s.investimento, f.ganhos) });
+
+// agrupa os leads por um critério, ligando cada grupo ao gasto correspondente. spendOf(grupo) -> totais ou undefined;
+// extras = grupos que gastaram no período mas não tiveram nenhum lead (ex.: campanha de WhatsApp direto).
+function funnelWithSpend(rows, groupOf, spendOf, extras) {
+  const groups = new Map();
+  for (const r of rows) {
+    const g = groupOf(r);
+    if (!groups.has(g.key)) groups.set(g.key, Object.assign({ list: [] }, g));
+    groups.get(g.key).list.push(r);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    const s = spendOf(g);
+    out.push(withSpend(Object.assign({ label: (s && s.label) || g.label, plataforma: s && s.plataforma, campanhaId: g.campId }, funnelOf(g.list)), s || ZERO_SPEND));
+  }
+  for (const x of extras(groups)) out.push(withSpend(Object.assign({ label: x.label, plataforma: x.plataforma, campanhaId: x.campanhaId, semLeads: true, foraDoPainel: x.foraDoPainel }, funnelOf([])), x));
+  return sortFunnel(out);
+}
+
+function funnelCampanhas(rows, ads) {
+  const { model, lpIds } = ads;
+  return funnelWithSpend(rows,
+    (r) => r.campId ? { key: 'id:' + r.campId, label: r.utm_campaign || '(não informado)', campId: r.campId } : { key: 'nome:' + (r.utm_campaign || ''), label: r.utm_campaign || '(não informado)' },
+    (g) => g.campId ? model.campaigns.get(g.campId) && Object.assign({}, model.campaigns.get(g.campId), { label: model.campaigns.get(g.campId).nome }) : undefined,
+    (groups) => [...model.campaigns.values()].filter((c) => c.investimento > 0 && !groups.has('id:' + c.id)).map((c) => ({ label: c.nome, plataforma: c.plataforma, campanhaId: c.id, foraDoPainel: !lpIds.has(c.id), investimento: c.investimento, impressoes: c.impressoes, cliques: c.cliques })));
+}
+function funnelCriativos(rows, ads) {
+  const { model, lpIds } = ads;
+  return funnelWithSpend(rows,
+    (r) => r.adKey ? { key: 'ad:' + r.adKey, label: r.utm_content, adKey: r.adKey } : { key: 'nome:' + (r.utm_content || ''), label: r.utm_content || '(não informado)' },
+    (g) => g.adKey ? Object.assign({}, model.ads.get(g.adKey)) : undefined,
+    (groups) => [...model.ads.values()].filter((a) => a.investimento > 0 && !groups.has('ad:' + a.key)).map((a) => ({ label: a.label, plataforma: a.plataforma, foraDoPainel: [...a.campanhaIds].every((id) => !lpIds.has(id)), investimento: a.investimento, impressoes: a.impressoes, cliques: a.cliques })));
+}
+function funnelPlataformas(rows, ads) {
+  const { model, lpIds } = ads;
+  const lp = {}; for (const p of ['meta', 'google']) lp[p] = adspend.sumCampaigns(model, (c) => c.plataforma === p && lpIds.has(c.id));
+  // agrupa pela plataforma de anúncio (facebook, instagram e meta viram "Meta"): o gasto é da plataforma, não dá para separar por origem do clique
+  const NOME = { meta: 'Meta', google: 'Google' };
+  const groupOf = (r) => { const p = adspend.platformOfSource(r.utm_source); return p ? { key: p, label: NOME[p], plat: p } : { key: 'raw:' + (r.utm_source || ''), label: r.utm_source || '(não informado)' }; };
+  return funnelWithSpend(rows, groupOf, (g) => (g.plat ? Object.assign({ plataforma: g.plat }, lp[g.plat]) : undefined), () => []);
+}
+
+// campo do funil/KPIs que depende do gasto: investimento nas campanhas "da LP" (com ao menos um lead no painel, de qualquer época)
+// ÷ leads/vendas vindos de anúncio. Campanhas sem lead no painel (ex.: conversa direta no WhatsApp) entram à parte, para não inflar o custo.
+function spendKpis(crmRows, ads) {
+  const { model, lpIds } = ads;
+  const lp = adspend.sumCampaigns(model, (c) => lpIds.has(c.id)), all = adspend.sumCampaigns(model);
+  const paid = crmRows.filter((r) => r.paid);
+  const ganhosPagos = paid.filter((r) => r.sync && r.situacao === 'ganho').length;
+  return {
+    investimento: lp.investimento, investimentoOutras: adspend.round2(all.investimento - lp.investimento), impressoes: lp.impressoes, cliques: lp.cliques,
+    leadsPagos: paid.length, ganhosPagos, cpl: adspend.cost(lp.investimento, paid.length), custoVenda: adspend.cost(lp.investimento, ganhosPagos),
+    // leads de anúncio sem o criativo identificado (link sem utm_content ou com o parâmetro em branco, ex.: {{ad.name}}): o custo por criativo fica acima do real
+    leadsSemCriativo: paid.filter((r) => !r.adKey).length
+  };
+}
+// conferência com o que a PLATAFORMA contou (gasto, cliques, leads) × o que o site registrou
+function adsConference(model, lpIds, rows) {
+  return ['meta', 'google'].map((p) => {
+    const all = adspend.sumCampaigns(model, (c) => c.plataforma === p), lp = adspend.sumCampaigns(model, (c) => c.plataforma === p && lpIds.has(c.id));
+    return { plataforma: p, investimento: all.investimento, investimentoForaDoPainel: adspend.round2(all.investimento - lp.investimento), impressoes: all.impressoes, cliques: all.cliques, leadsPlataforma: all.leadsPlataforma, contatosPlataforma: all.contatosPlataforma, leadsPainel: rows.filter((r) => adspend.platformOfSource(r.utm_source) === p).length };
+  }).filter((x) => x.investimento > 0 || x.leadsPainel > 0);
+}
+
+const AD_COLS = ['dia', 'plataforma', 'nivel', 'campanha_id', 'anuncio_id', 'campanha_nome', 'anuncio_nome', 'investimento', 'impressoes', 'cliques', 'leads_plataforma', 'contatos_plataforma', 'atualizado_em'];
+// o erro é "a tabela de gasto ainda não existe" (migration 0006 não aplicada)?
+const isAdsMissing = (e) => /PGRST205|42P01|Could not find the table|ad_spend_diario.*does not exist/i.test((e && e.message) || '');
+function loadAdsCfg() { try { return JSON.parse(fs.readFileSync(ADS_CFG_PATH, 'utf8')); } catch (e) { return {}; } }
+const brtDay = (ms) => new Date(ms - 3 * 3600000).toISOString().slice(0, 10); // dia de calendário em Brasília
+
+// primeiro/último dia com gasto e quando foi sincronizado pela última vez ({ } se a tabela está vazia)
+async function adSpendInfo() {
+  const one = async (order) => (await (await sb('/' + ADS_TABLE + '?select=dia,atualizado_em&order=' + order + '&limit=1')).json())[0];
+  const [first, last, upd] = await Promise.all([one('dia.asc'), one('dia.desc'), one('atualizado_em.desc')]);
+  return first ? { desde: first.dia, ate: last.dia, atualizadoEm: upd.atualizado_em } : {};
+}
+async function listAdSpend(desdeDia, ateDia) {
+  const q = ['select=' + AD_COLS.join(','), 'order=dia.asc,plataforma.asc,nivel.asc,campanha_id.asc,anuncio_id.asc'];
+  if (desdeDia) q.push('dia=gte.' + desdeDia);
+  if (ateDia) q.push('dia=lte.' + ateDia);
+  return fetchAll('/' + ADS_TABLE + '?' + q.join('&'));
+}
+// grava/atualiza (sem duplicar) as linhas de gasto: chave = dia + plataforma + nível + campanha + anúncio
+async function upsertAdSpend(rows, atualizadoEm) {
+  const now = atualizadoEm || new Date().toISOString();
+  for (let i = 0; i < rows.length; i += 500) {
+    const chunk = rows.slice(i, i + 500).map((r) => Object.assign({}, r, { atualizado_em: now }));
+    await sb('/' + ADS_TABLE + '?on_conflict=dia,plataforma,nivel,campanha_id,anuncio_id', { method: 'POST', headers: { Prefer: 'resolution=merge-duplicates,return=minimal' }, body: JSON.stringify(chunk) });
+  }
+  return rows.length;
+}
+// lê o gasto do período do filtro. { disponivel:false, motivo } quando a tabela não existe ou está vazia.
+async function loadAds(opts) {
+  let info;
+  try { info = await adSpendInfo(); } catch (e) { if (isAdsMissing(e)) return { disponivel: false, motivo: 'sem_tabela' }; throw e; }
+  if (!info.ate) return { disponivel: false, motivo: 'sem_dados' };
+  const spendRows = await listAdSpend(opts.from ? brtDay(opts.from) : undefined, opts.to ? brtDay(opts.to) : undefined);
+  return { disponivel: true, info, spendRows };
+}
 
 // etapas do funil na ordem do funil (pelo número da coluna no CRM), não por quantidade
 function byStage(rows) {
@@ -215,18 +336,35 @@ function byStage(rows) {
 // mais o funil de vendas do Power CRM (etapas, descartes com motivo, vendas) cruzado com campanha/criativo/plataforma…
 async function aggregate(opts) {
   opts = opts || {};
-  const params = ['select=ts,veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status,crm_negotiation_code,crm_sync_em,crm_situacao,crm_etapa,crm_etapa_cod,crm_motivo,crm_tags,crm_mensalidade,crm_adesao,crm_vistoria_em', 'limit=20000'];
+  const params = ['select=ts,veiculo,utm_source,utm_medium,utm_campaign,utm_content,utm_term,utm_id,act_id,placement,keyword,origem_form,cta,crm_origem,vendedor,status,crm_negotiation_code,crm_sync_em,crm_situacao,crm_etapa,crm_etapa_cod,crm_motivo,crm_tags,crm_mensalidade,crm_adesao,crm_vistoria_em', 'order=ts.asc'];
   const from = toIso(opts.from), to = toIso(opts.to);
   if (from) params.push('ts=gte.' + encodeURIComponent(from));
   if (to) params.push('ts=lte.' + encodeURIComponent(to));
-  const res = await sb('/' + TABLE + '?' + params.join('&'));
-  const raw = await res.json();
+  const raw = await fetchAll('/' + TABLE + '?' + params.join('&'));
+  // gasto dos anúncios no período (ou "não disponível": o resto do relatório funciona igual sem ele)
+  let adsLoad, ads = null;
+  try {
+    adsLoad = await loadAds(opts);
+    if (adsLoad.disponivel) {
+      const model = adspend.buildModel(adsLoad.spendRows, loadAdsCfg().apelidosCampanha);
+      // campanhas "da LP" = ligadas a algum lead do painel, de QUALQUER época (uma campanha que gastou e não gerou lead no período continua sendo da LP)
+      const lpIds = new Set();
+      for (const k of await fetchAll('/' + TABLE + '?select=utm_campaign,utm_id&order=ts.asc')) { const id = model.resolveCampaign(k.utm_id, k.utm_campaign); if (id) lpIds.add(id); }
+      ads = { model, lpIds };
+    }
+  } catch (e) { // um problema no gasto não pode derrubar o relatório de leads/vendas
+    log('gasto dos anúncios indisponível:', e.message);
+    adsLoad = { disponivel: false, motivo: 'erro' }; ads = null;
+  }
   const rows = raw.map((r) => ({
+    campId: ads ? ads.model.resolveCampaign(r.utm_id, r.utm_campaign) : null, adKey: ads ? ads.model.resolveAd(r.utm_content) : null,
     veiculo: r.veiculo, utm_source: r.utm_source, utm_medium: r.utm_medium, utm_campaign: r.utm_campaign, utm_content: r.utm_content, utm_term: r.utm_term, act_id: r.act_id, placement: r.placement, keyword: r.keyword,
     origem_form: r.origem_form === 'whatsapp' ? 'Pop-up do WhatsApp' : 'Formulário do site', cta: r.cta, crmOrigin: r.crm_origem, seller: r.vendedor, status: r.status,
     crmCode: !!r.crm_negotiation_code, sync: r.crm_sync_em, situacao: r.crm_situacao, etapa: r.crm_etapa, etapaCod: r.crm_etapa_cod, motivo: r.crm_motivo,
     tags: r.crm_tags || [], mensal: Number(r.crm_mensalidade) || 0, adesao: Number(r.crm_adesao) || 0, vistoria: r.crm_vistoria_em
   }));
+  // lead "vindo de anúncio" = ligado a uma campanha, ou com utm_source Meta/Google (base do custo por lead e por venda)
+  for (const r of rows) r.paid = !!r.campId || !!adspend.platformOfSource(r.utm_source);
   const sent = rows.filter((r) => r.status === 'sent' || r.status === 'dry-run');
   const crmRows = rows.filter((r) => r.crmCode);
   const found = crmRows.filter((r) => r.sync && r.situacao !== 'nao_encontrado'); // conferidos e achados no CRM
@@ -257,8 +395,15 @@ async function aggregate(opts) {
     porVendedor: tally(rows.filter((r) => r.seller), 'seller'),
     porStatus: tally(rows, 'status'),
     // Power CRM: leads sem código (duplicados/falha de envio) nunca chegaram lá, então ficam fora do funil
-    funil: Object.assign(funnelOf(crmRows), { semCodigo: rows.length - crmRows.length }),
-    funilPor: Object.fromEntries(Object.entries(FUNNEL_DIMS).map(([k, col]) => [k, funnelBy(crmRows, col)])),
+    funil: Object.assign(funnelOf(crmRows), { semCodigo: rows.length - crmRows.length }, ads ? spendKpis(crmRows, ads) : {}),
+    funilPor: Object.assign(
+      ads ? { campanha: funnelCampanhas(crmRows, ads), criativo: funnelCriativos(crmRows, ads), plataforma: funnelPlataformas(crmRows, ads) }
+        : { campanha: funnelBy(crmRows, 'utm_campaign'), criativo: funnelBy(crmRows, 'utm_content'), plataforma: funnelBy(crmRows, 'utm_source') },
+      Object.fromEntries(Object.entries(FUNNEL_DIMS).map(([k, col]) => [k, funnelBy(crmRows, col)]))),
+    // gasto dos anúncios: quando existe, de/até que dia está sincronizado e a conferência com o que Meta/Google contaram
+    anuncios: ads
+      ? { disponivel: true, desde: adsLoad.info.desde, ate: adsLoad.info.ate, atualizadoEm: adsLoad.info.atualizadoEm, atrasoDias: Math.max(0, Math.round((Date.parse(brtDay(Date.now())) - Date.parse(adsLoad.info.ate)) / 86400000)), conferencia: adsConference(ads.model, ads.lpIds, rows) }
+      : { disponivel: false, motivo: adsLoad.motivo },
     porEtapaCrm: byStage(found),
     porMotivoCrm: tally(found.filter((r) => r.situacao === 'perdido'), 'motivo'),
     porTagCrm: tally(found.flatMap((r) => r.tags.map((tag) => ({ tag }))), 'tag')
@@ -316,4 +461,4 @@ async function countsBySeller(veiculo, desde) {
   return counts;
 }
 
-module.exports = { recordCreated, recordStatus, listLeads, exportCsv, aggregate, countsBySeller, CRM_COLS, leadsForCrmSync, applyCrm, crmStatus, isSchemaMissing };
+module.exports = { upsertAdSpend, adSpendInfo, isAdsMissing, recordCreated, recordStatus, listLeads, exportCsv, aggregate, countsBySeller, CRM_COLS, leadsForCrmSync, applyCrm, crmStatus, isSchemaMissing };

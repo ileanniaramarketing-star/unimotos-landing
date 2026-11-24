@@ -11,7 +11,9 @@
     "dev:plain": "node scripts/serve.js --src --host 127.0.0.1 --port 4321",
     "vault": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1",
     "check:secrets": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 scan",
-    "assets:version": "node scripts/version-assets.js"
+    "assets:version": "node scripts/version-assets.js",
+    "ads:sync": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 run -- node scripts/sync-ads.js",
+    "ads:simular": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/vault.ps1 run -- node scripts/sync-ads.js --simular"
   },
   "engines": {
     "node": ">=18"

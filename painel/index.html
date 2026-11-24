@@ -10,8 +10,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/css/style.css?v=bdce69c5">
-  <link rel="stylesheet" href="/painel/painel.css?v=64d8ab7d">
+  <link rel="stylesheet" href="/css/style.css?v=f7fe23e3">
+  <link rel="stylesheet" href="/painel/painel.css?v=b9be08da">
 </head>
 <body class="painel-shell">
   <header class="painel-top">
@@ -126,6 +126,61 @@
         </div>
         <div><button type="submit">Filtrar</button></div>
       </form>
+
+      <!-- ===== Investimento em anúncios (gasto do Meta e do Google, cruzado com os leads e as vendas) ===== -->
+      <section class="sec" id="invest" aria-labelledby="investTitulo">
+        <div class="sec-head">
+          <h2 class="sec-title" id="investTitulo">Investimento em anúncios</h2>
+          <p class="sec-sub">Gasto das contas do Meta e do Google, cruzado com os leads (e as vendas, depois da conciliação). Vale para o período escolhido acima.</p>
+        </div>
+
+        <p class="funil-empty" id="investEmpty" hidden></p>
+
+        <div id="investBody" hidden>
+          <dl class="kpis kpis--3">
+            <div class="kpi"><dt>Investimento</dt><dd class="kpi__v" id="kInvest">R$ 0,00</dd><dd class="kpi__sub" id="kInvestSub"></dd></div>
+            <div class="kpi"><dt>Custo por lead</dt><dd class="kpi__v" id="kCpl">—</dd><dd class="kpi__sub" id="kCplSub"></dd></div>
+            <div class="kpi kpi--win"><dt>Custo por venda</dt><dd class="kpi__v" id="kCac">—</dd><dd class="kpi__sub" id="kCacSub"></dd></div>
+          </dl>
+
+          <div class="funil-tools">
+            <span class="funil-tools__label" id="investDimLabel">Agrupar por</span>
+            <div class="seg" id="investDim" role="group" aria-labelledby="investDimLabel">
+              <button type="button" data-dim="campanha" aria-pressed="true">Campanha</button>
+              <button type="button" data-dim="criativo" aria-pressed="false">Criativo</button>
+              <button type="button" data-dim="plataforma" aria-pressed="false">Plataforma</button>
+            </div>
+          </div>
+
+          <div class="painel-table-wrap">
+            <table class="painel-table funil-table" id="investTable">
+              <thead>
+                <tr>
+                  <th class="sticky-col" id="investColLabel">Campanha</th>
+                  <th class="num">Investimento</th><th class="num">Cliques</th><th class="num">Leads</th><th class="num">Custo por lead</th><th class="num">Vendidos</th><th class="num">Custo por venda</th>
+                </tr>
+              </thead>
+              <tbody id="investBodyRows"></tbody>
+            </table>
+          </div>
+          <p class="funil-note" id="investNota"></p>
+
+          <div class="conf">
+            <h3 class="conf__t">Conferência com as plataformas</h3>
+            <div class="painel-table-wrap">
+              <table class="painel-table funil-table" id="confTable">
+                <thead>
+                  <tr>
+                    <th>Plataforma</th><th class="num">Investimento</th><th class="num">Cliques</th><th class="num">Leads (plataforma)</th><th class="num">Outros contatos</th><th class="num">Leads no site</th>
+                  </tr>
+                </thead>
+                <tbody id="confBodyRows"></tbody>
+              </table>
+            </div>
+            <p class="funil-note" id="confNota"></p>
+          </div>
+        </div>
+      </section>
 
       <!-- ===== Funil de vendas (dados conciliados do Power CRM, cruzados com a campanha de origem) ===== -->
       <section class="sec" id="funil" aria-labelledby="funilTitulo">
@@ -298,6 +353,6 @@
     </section>
   </main>
 
-  <script src="/painel/painel.js?v=a84771b0" defer></script>
+  <script src="/painel/painel.js?v=567ec541" defer></script>
 </body>
 </html>
