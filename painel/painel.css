@@ -209,6 +209,22 @@ th.sticky-col { background: #0d0d0e; }
 .kpi__sub { margin-top: 4px; font-size: .76rem; line-height: 1.35; color: var(--muted); }
 .kpi--win { background: rgba(255, 255, 255, .02); }
 #kGanhos { color: #5fdf95; }
+/* funil de vendas: 9 números em duas linhas — em cima a sequência do funil (5), embaixo o resultado (4). Grade de 20 colunas: 5 × 4 e 4 × 5 */
+.kpis--funil { grid-template-columns: repeat(20, minmax(0, 1fr)); }
+.kpis--funil .kpi { grid-column: span 5; border-right: 1px solid var(--line); border-bottom: 0; }
+.kpis--funil .kpi:nth-child(-n+5) { grid-column: span 4; border-bottom: 1px solid var(--line); }
+.kpis--funil .kpi:nth-child(5), .kpis--funil .kpi:last-child { border-right: 0; }
+/* rótulo que quebra em 2 linhas (ex.: "Liberadas para cadastro" em tela estreita) não pode empurrar só o número dele para baixo:
+   rótulo, número e detalhe de cada cartão ficam nas mesmas linhas dos vizinhos (subgrade; sem suporte, só perde o alinhamento) */
+@supports (grid-template-rows: subgrid) {
+  .kpis--funil .kpi { display: grid; grid-template-rows: subgrid; grid-row: span 3; }
+}
+/* a coluna "Liberadas p/ cadastro" entrou na tabela do funil: respiro lateral menor + nome da campanha mais curto (já é cortado com "…" e tem dica ao passar o mouse)
+   para a tabela continuar do mesmo tamanho de antes (cabia em 1280 px; sem isto passaria a rolar para o lado) */
+.funil-table th, .funil-table td { padding-left: 10px; padding-right: 10px; }
+.funil-table th:first-child, .funil-table td:first-child { padding-left: 14px; }
+.funil-table th:last-child, .funil-table td:last-child { padding-right: 14px; }
+.funil-table th.col-lib { line-height: 1.3; }
 
 /* barra de situação: como os leads do CRM se dividem */
 .sitbar { margin-bottom: 24px; }
@@ -230,7 +246,7 @@ th.sticky-col { background: #0d0d0e; }
 .funil-table td.num b { font-weight: 800; color: #fff; }
 .funil-table td.is-win { color: #5fdf95; font-weight: 800; }
 .funil-table td.is-zero { color: var(--dim); }
-.funil-table .label { display: inline-block; max-width: 300px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-weight: 700; color: #fff; }
+.funil-table .label { display: inline-block; max-width: 260px; overflow: hidden; text-overflow: ellipsis; vertical-align: bottom; font-weight: 700; color: #fff; }
 .funil-note { margin: 10px 0 24px; font-size: .78rem; line-height: 1.5; color: var(--muted); }
 .funil-note:empty { display: none; }
 .funil-empty { padding: 28px 24px; border: 1px dashed var(--line-2); border-radius: 14px; text-align: center; font-size: .9rem; line-height: 1.55; color: var(--muted); }
@@ -260,6 +276,11 @@ th.sticky-col { background: #0d0d0e; }
   .kpi:nth-child(2n) { border-right: 0; }
   .kpi:nth-last-child(-n+4) { border-bottom: 1px solid var(--line); }
   .kpi:nth-last-child(-n+2) { border-bottom: 0; }
+  /* funil: 2 colunas, o 9º número ocupa a linha inteira */
+  .kpis--funil { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpis--funil .kpi, .kpis--funil .kpi:nth-child(-n+5) { grid-column: auto; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .kpis--funil .kpi:nth-child(2n) { border-right: 0; }
+  .kpis--funil .kpi:last-child { grid-column: 1 / -1; border-right: 0; border-bottom: 0; }
 }
 @media (max-width: 700px) {
   .crm-bar { flex-direction: column; align-items: stretch; }

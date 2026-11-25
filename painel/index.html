@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Urbanist:wght@600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css?v=f7fe23e3">
-  <link rel="stylesheet" href="/painel/painel.css?v=b9be08da">
+  <link rel="stylesheet" href="/painel/painel.css?v=929d1e2a">
 </head>
 <body class="painel-shell">
   <header class="painel-top">
@@ -204,12 +204,13 @@
         <p class="funil-empty" id="funilEmpty" hidden></p>
 
         <div id="funilBody" hidden>
-          <dl class="kpis">
+          <dl class="kpis kpis--funil">
             <div class="kpi"><dt>Leads no CRM</dt><dd class="kpi__v" id="kLeads">0</dd><dd class="kpi__sub" id="kLeadsSub"></dd></div>
             <div class="kpi"><dt>Em andamento</dt><dd class="kpi__v" id="kAbertos">0</dd><dd class="kpi__sub" id="kAbertosSub"></dd></div>
             <div class="kpi"><dt>Chegaram à vistoria</dt><dd class="kpi__v" id="kVistorias">0</dd><dd class="kpi__sub" id="kVistoriasSub"></dd></div>
-            <div class="kpi"><dt>Descartados</dt><dd class="kpi__v" id="kPerdidos">0</dd><dd class="kpi__sub" id="kPerdidosSub"></dd></div>
+            <div class="kpi" title="Leads em andamento que estão, agora, na etapa “Liberadas para cadastro” do Power CRM (posição na última conciliação)."><dt>Liberadas para cadastro</dt><dd class="kpi__v" id="kLiberadas">0</dd><dd class="kpi__sub" id="kLiberadasSub"></dd></div>
             <div class="kpi kpi--win"><dt>Vendidos</dt><dd class="kpi__v" id="kGanhos">0</dd><dd class="kpi__sub" id="kGanhosSub"></dd></div>
+            <div class="kpi"><dt>Descartados</dt><dd class="kpi__v" id="kPerdidos">0</dd><dd class="kpi__sub" id="kPerdidosSub"></dd></div>
             <div class="kpi kpi--win"><dt>Taxa de venda</dt><dd class="kpi__v" id="kTaxa">0%</dd><dd class="kpi__sub">vendidos ÷ leads no CRM</dd></div>
             <div class="kpi kpi--win"><dt>Mensalidades</dt><dd class="kpi__v" id="kMensal">R$ 0,00</dd><dd class="kpi__sub">soma mensal dos vendidos</dd></div>
             <div class="kpi kpi--win"><dt>Adesões</dt><dd class="kpi__v" id="kAdesao">R$ 0,00</dd><dd class="kpi__sub">soma das adesões dos vendidos</dd></div>
@@ -236,7 +237,7 @@
               <thead>
                 <tr>
                   <th class="sticky-col" id="funilColLabel">Campanha</th>
-                  <th class="num">Leads</th><th class="num">Em andamento</th><th class="num">Vistorias</th><th class="num">Vendidos</th><th class="num">Descartados</th><th class="num">Taxa de venda</th><th class="num">Mensalidades</th><th class="num">Adesões</th>
+                  <th class="num">Leads</th><th class="num">Em andamento</th><th class="num">Vistorias</th><th class="num col-lib" title="Em andamento e, agora, na etapa “Liberadas para cadastro”">Liberadas<br>p/ cadastro</th><th class="num">Vendidos</th><th class="num">Descartados</th><th class="num">Taxa de venda</th><th class="num">Mensalidades</th><th class="num">Adesões</th>
                 </tr>
               </thead>
               <tbody id="funilBodyRows"></tbody>
@@ -353,6 +354,6 @@
     </section>
   </main>
 
-  <script src="/painel/painel.js?v=567ec541" defer></script>
+  <script src="/painel/painel.js?v=8c4b4693" defer></script>
 </body>
 </html>

@@ -192,17 +192,23 @@ function tally(rows, key) {
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
+// coluna "Liberadas para cadastro" do funil do Power CRM. Casa pelo NOME (sem acento/caixa): o nome vem do próprio CRM a cada
+// conciliação, enquanto o número da coluna muda se reordenarem o funil.
+const isReleasedStage = (etapa) => /^liberad[ao]s?\b.*\bcadastro/.test(String(etapa || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase());
+
 // funil de vendas do Power CRM para um grupo de leads (que têm código do CRM). "conciliados" = já conferidos no CRM e
-// encontrados lá; "vistorias" = chegaram à vistoria (ou já viraram venda); taxa de venda = vendidos ÷ leads do grupo.
+// encontrados lá; "vistorias" = chegaram à vistoria (ou já viraram venda); "liberadas" = em andamento e, AGORA, na etapa
+// "Liberadas para cadastro" (quem foi descartado ou já vendeu não conta; os descartados que pararam ali vão em
+// "liberadasDescartadas", para o número bater com o cartão "Etapas no CRM"); taxa de venda = vendidos ÷ leads do grupo.
 function funnelOf(rows) {
-  const f = { leads: rows.length, conciliados: 0, naoEncontrados: 0, abertos: 0, vistorias: 0, ganhos: 0, perdidos: 0, mensalidades: 0, adesoes: 0 };
+  const f = { leads: rows.length, conciliados: 0, naoEncontrados: 0, abertos: 0, liberadas: 0, liberadasDescartadas: 0, vistorias: 0, ganhos: 0, perdidos: 0, mensalidades: 0, adesoes: 0 };
   for (const r of rows) {
     if (!r.sync) continue;
     if (r.situacao === 'nao_encontrado') { f.naoEncontrados++; continue; }
     f.conciliados++;
     if (r.situacao === 'ganho') { f.ganhos++; f.mensalidades += r.mensal; f.adesoes += r.adesao; }
-    else if (r.situacao === 'perdido') f.perdidos++;
-    else f.abertos++;
+    else if (r.situacao === 'perdido') { f.perdidos++; if (isReleasedStage(r.etapa)) f.liberadasDescartadas++; }
+    else { f.abertos++; if (isReleasedStage(r.etapa)) f.liberadas++; }
     if (r.vistoria || r.situacao === 'ganho') f.vistorias++;
   }
   f.mensalidades = round2(f.mensalidades); f.adesoes = round2(f.adesoes);

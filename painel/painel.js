@@ -540,7 +540,7 @@
         const count = (v) => num(fmtInt(v), v ? '' : 'is-zero');           // zero fica apagado
         const win = (v, text) => num(text, v ? 'is-win' : 'is-zero');      // vendas em verde
         tr.append(
-          lab, num(fmtInt(r.leads)), count(r.abertos), count(r.vistorias), win(r.ganhos, fmtInt(r.ganhos)), count(r.perdidos),
+          lab, num(fmtInt(r.leads)), count(r.abertos), count(r.vistorias), count(r.liberadas), win(r.ganhos, fmtInt(r.ganhos)), count(r.perdidos),
           win(r.ganhos, pctOf(r.ganhos, r.leads)),
           win(r.mensalidades, r.mensalidades ? fmtBrl(r.mensalidades) : '—'), win(r.adesoes, r.adesoes ? fmtBrl(r.adesoes) : '—')
         );
@@ -568,6 +568,9 @@
       $('#kAbertosSub').textContent = pctOf(f.abertos, conc) + ' dos conciliados';
       $('#kVistorias').textContent = fmtInt(f.vistorias);
       $('#kVistoriasSub').textContent = pctOf(f.vistorias, conc) + ' dos conciliados';
+      $('#kLiberadas').textContent = fmtInt(f.liberadas);
+      const libDesc = f.liberadasDescartadas ? '+' + plural(f.liberadasDescartadas, 'descartado', 'descartados') + ' nessa etapa' : '';
+      $('#kLiberadasSub').textContent = [f.liberadas ? pctOf(f.liberadas, conc) + ' dos conciliados' : 'nenhum nessa etapa agora', libDesc].filter(Boolean).join(' · ');
       $('#kPerdidos').textContent = fmtInt(f.perdidos);
       $('#kPerdidosSub').textContent = pctOf(f.perdidos, conc) + ' dos conciliados';
       $('#kGanhos').textContent = fmtInt(f.ganhos);
